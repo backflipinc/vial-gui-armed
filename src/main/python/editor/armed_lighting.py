@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Lighting page for keyboards with the IO84 channel: every effect, both colours, Fn overlay, light bar, live preview
+# Lighting page for qmk-armed keyboards: every effect, live preview, and the colour 2 / Fn / light bar features they report
 import random
 import time
 
@@ -10,9 +10,9 @@ from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QSlid
 
 import armed
 from editor.basic_editor import BasicEditor
-from effects_preview import EffectPreview, StripPreview, TWO_COLOR, effect_key
-from protocol.io84 import V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, \
-    V_HUE, V_SAT, V_VAL, V_SPEED
+from effects_preview import EffectPreview, StripPreview, effect_key
+from protocol.qmk_armed import V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, \
+    V_HUE, V_SAT, V_VAL, V_SPEED, F_RGB_MATRIX, F_COLOR2, F_FN_COLOR, F_STRIP
 from vial_device import VialKeyboard
 from widgets.armed_controls import BracketFrame, Swatches, Segmented, StripView
 from widgets.keyboard_widget import KeyboardWidget
@@ -216,6 +216,7 @@ class ArmedLighting(BasicEditor):
         grid.addWidget(self.strip_frame, 2, 0, 1, 2)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
+        self.grid = grid
 
         right = QVBoxLayout()
         right.setSpacing(14)
@@ -246,7 +247,10 @@ class ArmedLighting(BasicEditor):
         return row
 
     def valid(self):
-        return isinstance(self.device, VialKeyboard) and self.device.keyboard.io84 is not None
+        if not isinstance(self.device, VialKeyboard):
+            return False
+        armed = self.device.keyboard.armed
+        return armed is not None and armed.has(F_RGB_MATRIX)
 
     def fit_preview(self):
         r = self.kb_frame.contentsRect()
@@ -255,7 +259,7 @@ class ArmedLighting(BasicEditor):
 
     def rebuild(self, device):
         super().rebuild(device)
-        self.io = device.keyboard.io84 if self.valid() else None
+        self.io = device.keyboard.armed if self.valid() else None
         if self.io is None:
             self.timer.stop()
             return
@@ -272,6 +276,14 @@ class ArmedLighting(BasicEditor):
             w.glow = (0, 0, 0)
         self.fn_keys = self.fn_lit_keys(kb)
 
+        has2, has_fn = self.io.has(F_COLOR2), self.io.has(F_FN_COLOR)
+        self.color2_frame.setVisible(has2)
+        self.fn_frame.setVisible(has_fn)
+        self.strip_frame.setVisible(self.io.has(F_STRIP))
+        self.grid.setColumnStretch(1, 1 if has2 or has_fn else 0)
+        self.lbl_hint.setText(tr("ArmedLighting", "2C = uses COLOR 2 · click the keyboard to press keys") if has2
+                              else tr("ArmedLighting", "click the keyboard to press keys"))
+
         self.val.setMaximum(self.io.max_brightness)
         self.block(True)
         self.effects.clear()
@@ -280,7 +292,7 @@ class ArmedLighting(BasicEditor):
                 continue
             item = QListWidgetItem(e.name)
             item.setData(Qt.UserRole, e.qmk_id)
-            item.setData(Qt.UserRole + 1, effect_key(e.name) in TWO_COLOR)
+            item.setData(Qt.UserRole + 1, e.uses_color2)
             self.effects.addItem(item)
         for sw in (self.color2, self.fn_color, self.strip_color):
             sw.set_colors(self.io.colors)
@@ -352,8 +364,7 @@ class ArmedLighting(BasicEditor):
         self.fn_name.setText(self.color_name(io.get(V_FN_COLOR)))
         self.btn_enabled.setText("ON" if io.get(V_ENABLED) else "OFF")
 
-        name = item.text().upper() if item else ""
-        uses2 = effect_key(name) in TWO_COLOR
+        uses2 = bool(item and item.data(Qt.UserRole + 1))
         self.color2_frame.set_accent(uses2)
         self.color2_name.setStyleSheet("color: {};".format(armed.TXT if uses2 else armed.DIM))
 
@@ -433,5 +444,6 @@ class ArmedLighting(BasicEditor):
             if w is not None:
                 w.glow = c
         self.kb.update()
-        self.strip_preview.caps = False
-        self.strip_view.set_colors(self.strip_preview.frame(t))
+        if self.io.has(F_STRIP):
+            self.strip_preview.caps = False
+            self.strip_view.set_colors(self.strip_preview.frame(t))

@@ -8,7 +8,13 @@ from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QSizePolicy, QGri
 from editor.basic_editor import BasicEditor
 from widgets.clickable_label import ClickableLabel
 from util import tr
+from protocol.qmk_armed import F_RGB_MATRIX
 from vial_device import VialKeyboard
+
+
+def vialrgb_shown(keyboard):
+    """ qmk-armed keyboards set RGB Matrix on the Lighting page, VialRGB would show their effects as off """
+    return keyboard.lighting_vialrgb and not (keyboard.armed and keyboard.armed.has(F_RGB_MATRIX))
 
 
 class QmkRgblightEffect:
@@ -376,7 +382,7 @@ class VialRGBHandler(BasicHandler):
         self.rgb_color.setStyleSheet("QWidget { background-color: %s}" % self.current_color().name())
 
     def valid(self):
-        return isinstance(self.device, VialKeyboard) and self.device.keyboard.lighting_vialrgb
+        return isinstance(self.device, VialKeyboard) and vialrgb_shown(self.device.keyboard)
 
 
 class RGBConfigurator(BasicEditor):
@@ -413,9 +419,9 @@ class RGBConfigurator(BasicEditor):
         self.device.keyboard.save_rgb()
 
     def valid(self):
-        return isinstance(self.device, VialKeyboard) and self.device.keyboard.io84 is None and \
+        return isinstance(self.device, VialKeyboard) and \
                (self.device.keyboard.lighting_qmk_rgblight or self.device.keyboard.lighting_qmk_backlight
-                or self.device.keyboard.lighting_vialrgb)
+                or vialrgb_shown(self.device.keyboard))
 
     def block_signals(self):
         for h in self.handlers:

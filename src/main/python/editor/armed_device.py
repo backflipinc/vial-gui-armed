@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Device page for keyboards with the IO84 channel
+# Device page for qmk-armed keyboards with auto-sleep
 
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGridLayout
 
 from editor.basic_editor import BasicEditor
-from protocol.io84 import V_SLEEP
+from protocol.qmk_armed import V_SLEEP, F_SLEEP
 from vial_device import VialKeyboard
 from widgets.armed_controls import BracketFrame, Segmented
 from util import tr
@@ -18,9 +18,6 @@ class ArmedDevice(BasicEditor):
         self.sleep_order = []
 
         power = BracketFrame("POWER")
-        hint = QLabel(tr("ArmedDevice", "WIRELESS ONLY"))
-        hint.setObjectName("armedHint")
-        power.header.addWidget(hint)
 
         row = QHBoxLayout()
         lbl = QLabel(tr("ArmedDevice", "AUTO-SLEEP"))
@@ -33,8 +30,7 @@ class ArmedDevice(BasicEditor):
         row.addStretch(1)
         power.box.addLayout(row)
 
-        note = QLabel(tr("ArmedDevice", "Deep sleep in Bluetooth / 2.4 GHz after this much idle time.\n"
-                                        "Any key, the knob or a switch wakes it."))
+        note = QLabel(tr("ArmedDevice", "Sleeps after this much idle time, a key press wakes it."))
         note.setObjectName("armedHint")
         power.box.addWidget(note)
         power.box.addStretch(1)
@@ -49,11 +45,14 @@ class ArmedDevice(BasicEditor):
         self.addStretch(1)
 
     def valid(self):
-        return isinstance(self.device, VialKeyboard) and self.device.keyboard.io84 is not None
+        if not isinstance(self.device, VialKeyboard):
+            return False
+        armed = self.device.keyboard.armed
+        return armed is not None and armed.has(F_SLEEP)
 
     def rebuild(self, device):
         super().rebuild(device)
-        self.io = device.keyboard.io84 if self.valid() else None
+        self.io = device.keyboard.armed if self.valid() else None
         if self.io is None:
             return
         minutes = self.io.sleep_minutes

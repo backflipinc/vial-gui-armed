@@ -1,16 +1,33 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# IO Type 84 Pro raw HID channel (command 0x84): lighting and device settings beyond VIA / VialRGB
+# qmk-armed protocol (command 0xAD): settings VIA / Vial don't cover, reported per keyboard
 import logging
 import struct
 
-CMD_IO84 = 0x84
-IO84_PROTOCOL = 1
+CMD_ARMED = 0xAD
+ARMED_PROTOCOL = 1
 
 SUB_INFO, SUB_LIST, SUB_GET, SUB_SET, SUB_SAVE = range(5)
 L_EFFECTS, L_COLORS, L_STRIP_MODES, L_SLEEP, L_LEDS = range(5)
+L_COUNT = 5
 
 V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, V_SLEEP, \
     V_HUE, V_SAT, V_VAL, V_SPEED = range(12)
+
+F_RGB_MATRIX = 1 << 0
+F_COLOR2 = 1 << 1
+F_FN_COLOR = 1 << 2
+F_STRIP = 1 << 3
+F_SLEEP = 1 << 4
+
+FEATURE_VALUES = {
+    F_RGB_MATRIX: (V_ENABLED, V_EFFECT, V_HUE, V_SAT, V_VAL, V_SPEED),
+    F_COLOR2: (V_COLOR2,),
+    F_FN_COLOR: (V_FN_COLOR,),
+    F_STRIP: (V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS),
+    F_SLEEP: (V_SLEEP,),
+}
+
+EFFECT_COLOR2 = 0x01
 
 UNHANDLED = 0xFF
 
@@ -19,14 +36,19 @@ def _cstr(data):
     return bytes(data).split(b"\x00")[0].decode("ascii", "replace")
 
 
-class IO84Effect:
+class ArmedEffect:
 
-    def __init__(self, qmk_id, name):
+    def __init__(self, qmk_id, flags, name):
         self.qmk_id = qmk_id
+        self.flags = flags
         self.name = name
 
+    @property
+    def uses_color2(self):
+        return bool(self.flags & EFFECT_COLOR2)
 
-class IO84Color:
+
+class ArmedColor:
 
     def __init__(self, h, s, name):
         self.h = h
@@ -38,7 +60,7 @@ class IO84Color:
         return self.h == 0 and self.s == 1
 
 
-class IO84Led:
+class ArmedLed:
 
     def __init__(self, row, col, x, y, flags):
         self.row = row
@@ -52,11 +74,13 @@ class IO84Led:
         return bool(self.flags & 0x01)
 
 
-class IO84:
-    """ Settings of the IO Type 84 Pro QMK firmware not covered by Vial """
+class QmkArmed:
+    """ Keyboard running qmk-armed firmware; features tell which settings it has """
 
     def __init__(self, keyboard):
         self.keyboard = keyboard
+        self.version = (0, 0, 0)
+        self.features = 0
         self.effects = []
         self.colors = []
         self.strip_modes = []
@@ -66,26 +90,34 @@ class IO84:
         self.values = dict()
 
     def _send(self, *payload):
-        msg = struct.pack("B" * (len(payload) + 1), CMD_IO84, *payload)
+        msg = struct.pack("B" * (len(payload) + 1), CMD_ARMED, *payload)
         return self.keyboard.usb_send(self.keyboard.dev, msg, retries=20)
 
     @classmethod
     def probe(cls, keyboard):
-        """ Returns an IO84 instance if the keyboard speaks the protocol, otherwise None """
+        """ Returns a QmkArmed instance if the firmware speaks the protocol, otherwise None """
         if keyboard.vial_protocol < 0:
             return None
-        io = cls(keyboard)
+        armed = cls(keyboard)
         try:
-            data = io._send(SUB_INFO)
+            data = armed._send(SUB_INFO)
         except Exception as e:
-            logging.warning("IO84 probe failed: %s", e)
+            logging.warning("qmk-armed probe failed: %s", e)
             return None
-        if data[0] != CMD_IO84 or bytes(data[2:6]) != b"IO84" or data[6] != IO84_PROTOCOL:
+        if data[0] != CMD_ARMED or bytes(data[2:6]) != b"ARMD" or data[6] != ARMED_PROTOCOL:
             return None
-        counts = data[7:12]
-        io.max_brightness = data[12] or 255
-        io.load(counts)
-        return io
+        armed.version = tuple(data[7:10])
+        armed.features = data[10] | (data[11] << 8)
+        armed.max_brightness = data[12 + L_COUNT] or 255
+        armed.load(data[12:12 + L_COUNT])
+        return armed
+
+    def has(self, feature):
+        return bool(self.features & feature)
+
+    @property
+    def version_str(self):
+        return "{}.{}.{}".format(*self.version)
 
     def _list(self, kind, count):
         out = []
@@ -97,18 +129,21 @@ class IO84:
         return out
 
     def load(self, counts):
-        self.effects = [IO84Effect(d[0], _cstr(d[1:])) for d in self._list(L_EFFECTS, counts[L_EFFECTS])]
-        self.colors = [IO84Color(d[0], d[1], _cstr(d[2:])) for d in self._list(L_COLORS, counts[L_COLORS])]
+        self.effects = [ArmedEffect(d[0], d[1], _cstr(d[2:])) for d in self._list(L_EFFECTS, counts[L_EFFECTS])]
+        self.colors = [ArmedColor(d[0], d[1], _cstr(d[2:])) for d in self._list(L_COLORS, counts[L_COLORS])]
         self.strip_modes = [_cstr(d) for d in self._list(L_STRIP_MODES, counts[L_STRIP_MODES])]
         self.sleep_minutes = [d[0] for d in self._list(L_SLEEP, counts[L_SLEEP])]
-        self.leds = [IO84Led(d[0], d[1], d[2], d[3], d[4]) for d in self._list(L_LEDS, counts[L_LEDS])]
+        self.leds = [ArmedLed(d[0], d[1], d[2], d[3], d[4]) for d in self._list(L_LEDS, counts[L_LEDS])]
         self.reload_values()
 
     def reload_values(self):
-        for vid in range(V_SPEED + 1):
-            data = self._send(SUB_GET, vid)
-            if data[0] != UNHANDLED:
-                self.values[vid] = data[3]
+        for feature, vids in FEATURE_VALUES.items():
+            if not self.has(feature):
+                continue
+            for vid in vids:
+                data = self._send(SUB_GET, vid)
+                if data[0] != UNHANDLED:
+                    self.values[vid] = data[3]
 
     def get(self, vid):
         return self.values.get(vid, 0)

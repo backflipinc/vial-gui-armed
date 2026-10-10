@@ -56,7 +56,7 @@ class BracketFrame(QFrame):
 
 
 class Swatches(QWidget):
-    """ Row of preset colours (IO84Color list); emits the index """
+    """ Row of preset colours (ArmedColor list); emits the index """
 
     changed = pyqtSignal(int)
 

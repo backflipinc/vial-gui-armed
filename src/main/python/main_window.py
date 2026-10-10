@@ -268,6 +268,8 @@ class MainWindow(QMainWindow):
             self.lbl_lock.style().polish(self.lbl_lock)
             uid = struct.pack("<Q", kb.keyboard_id & 0xFFFFFFFFFFFFFFFF).hex().upper()
             foot = "VIAL PROTO {} \u00b7 {} LAYERS \u00b7 UID {}".format(kb.vial_protocol, kb.layers, uid)
+            if kb.armed:
+                foot = "QMK-ARMED {} \u00b7 {}".format(kb.armed.version_str, foot)
         elif dev is not None:
             foot = dev.title().upper()
         self.lbl_foot.setText(foot)

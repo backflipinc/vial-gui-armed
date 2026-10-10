@@ -413,7 +413,7 @@ class RGBConfigurator(BasicEditor):
         self.device.keyboard.save_rgb()
 
     def valid(self):
-        return isinstance(self.device, VialKeyboard) and \
+        return isinstance(self.device, VialKeyboard) and self.device.keyboard.io84 is None and \
                (self.device.keyboard.lighting_qmk_rgblight or self.device.keyboard.lighting_qmk_backlight
                 or self.device.keyboard.lighting_vialrgb)
 

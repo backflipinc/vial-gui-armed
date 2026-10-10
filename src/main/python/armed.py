@@ -176,6 +176,15 @@ QMessageBox QLabel {{ color: {TXT}; }}
 
 #armedMain::pane {{ border: 0; }}
 #armedCrumb {{ font-family: "{HEAD}"; font-size: 22px; font-weight: bold; color: {MID}; }}
+#armedFrameTitle {{ font-family: "{HEAD}"; font-size: 17px; font-weight: bold; color: {TXT}; }}
+#armedHint {{ color: {DIM}; font-size: 12px; }}
+#armedKey {{ color: {MID}; }}
+#armedSeg QPushButton {{ padding: 4px 10px; margin: 0; border-right-width: 0; }}
+#armedSeg QPushButton:last-child {{ border-right-width: 1px; }}
+#armedSeg QPushButton:checked {{ background: {ACC}; color: {BG}; border-color: {ACC}; }}
+#armedList {{ background: {BG}; border: 1px solid {LINE}; padding: 6px 0; outline: 0; }}
+#armedHue::groove:horizontal {{ border: 0; background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f00, stop:0.17 #ff0, stop:0.33 #0f0, stop:0.5 #0ff, stop:0.67 #00f, stop:0.83 #f0f, stop:1 #f00); }}
+#armedHue::sub-page:horizontal {{ background: transparent; border: 0; }}
 #armedNoDevices {{ color: {MID}; font-size: 14px; }}
 """
 

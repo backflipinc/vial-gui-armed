@@ -24,6 +24,7 @@ class KeyWidget:
         self.tooltip = ""
         self.color = None
         self.mask_color = None
+        self.glow = None
         self.scale = 0
 
         self.rotation_angle = desc.rotation_angle
@@ -374,6 +375,17 @@ class KeyboardWidget(QWidget):
                 f.setPointSizeF(f.pointSizeF() * 0.88)
         return f
 
+    def paint_glow(self, qp, key):
+        """ Keycap lit by an LED preview colour """
+        c = QColor(*key.glow)
+        lum = max(c.red(), c.green(), c.blue())
+        fill = QColor(armed.KEY) if lum < 8 else QColor(c.red() * 3 // 5, c.green() * 3 // 5, c.blue() * 3 // 5)
+        pen = QPen(c if lum >= 8 else QColor(armed.LINE))
+        pen.setCosmetic(True)
+        qp.setPen(pen)
+        qp.setBrush(QBrush(fill))
+        qp.drawPath(key.background_draw_path)
+
     def paint_armed(self, qp):
         line_pen = QPen(QColor(armed.LINE2))
         line_pen.setCosmetic(True)
@@ -403,6 +415,10 @@ class KeyboardWidget(QWidget):
             qp.translate(-key.rotation_x, -key.rotation_y)
 
             active = key.active or (self.active_key == key and not self.active_mask)
+            if key.glow is not None:
+                self.paint_glow(qp, key)
+                qp.restore()
+                continue
             brush = key_brush
             if key.pressed:
                 brush = pressed_brush

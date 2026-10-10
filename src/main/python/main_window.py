@@ -26,6 +26,8 @@ from editor.layout_editor import LayoutEditor
 from editor.macro_recorder import MacroRecorder
 from editor.qmk_settings import QmkSettings
 from editor.rgb_configurator import RGBConfigurator
+from editor.armed_lighting import ArmedLighting
+from editor.armed_device import ArmedDevice
 from tabbed_keycodes import TabbedKeycodes
 from editor.tap_dance import TapDance
 from unlocker import Unlocker
@@ -89,12 +91,15 @@ class MainWindow(QMainWindow):
         self.qmk_settings = QmkSettings()
         self.matrix_tester = MatrixTest(self.layout_editor)
         self.rgb_configurator = RGBConfigurator()
+        self.armed_lighting = ArmedLighting(self.layout_editor)
+        self.armed_device = ArmedDevice()
 
         self.editors = [(self.keymap_editor, "Keymap"), (self.layout_editor, "Layout"), (self.macro_recorder, "Macros"),
-                        (self.rgb_configurator, "Lighting"), (self.tap_dance, "Tap Dance"), (self.combos, "Combos"),
+                        (self.rgb_configurator, "Lighting"), (self.armed_lighting, "Lighting"),
+                        (self.tap_dance, "Tap Dance"), (self.combos, "Combos"),
                         (self.key_override, "Key Overrides"), (self.alt_repeat_key, "Alt Repeat Key"),
                         (self.qmk_settings, "QMK Settings"), (self.matrix_tester, "Matrix tester"),
-                        (self.firmware_flasher, "Firmware updater")]
+                        (self.firmware_flasher, "Firmware updater"), (self.armed_device, "Device")]
 
         Unlocker.global_layout_editor = self.layout_editor
         Unlocker.global_main_window = self
@@ -458,7 +463,8 @@ class MainWindow(QMainWindow):
 
         for e in [self.layout_editor, self.keymap_editor, self.firmware_flasher, self.macro_recorder,
                   self.tap_dance, self.combos, self.key_override, self.alt_repeat_key,
-                  self.qmk_settings, self.matrix_tester, self.rgb_configurator]:
+                  self.qmk_settings, self.matrix_tester, self.rgb_configurator, self.armed_lighting,
+                  self.armed_device]:
             e.rebuild(self.autorefresh.current_device)
         self.update_armed_status()
 

@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt, QTimer, QCoreApplication, QByteArray, QBuffer, QIOD
 from PyQt5.QtGui import QPalette
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QProgressBar, QDialog, QApplication
 
+from themes import Theme
 from widgets.keyboard_widget import KeyboardWidget
 from util import tr
 
@@ -15,8 +16,9 @@ class Unlocker(QDialog):
     def __init__(self, layout_editor, keyboard):
         super().__init__()
 
-        self.setStyleSheet("background-color: {}".format(
-            QApplication.palette().color(QPalette.Button).lighter(130).name()))
+        if not Theme.is_armed():
+            self.setStyleSheet("background-color: {}".format(
+                QApplication.palette().color(QPalette.Button).lighter(130).name()))
 
         self.keyboard = keyboard
 

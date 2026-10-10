@@ -1,4 +1,13 @@
-### vial-gui
+### vial-gui-armed
+
+A fork of [vial-gui](https://github.com/vial-kb/vial-gui) with the **Armed** theme — Hi-Tech / Military Black,
+the design code of the [IO Type 84 Pro QMK firmware](https://github.com/backflipinc/io-type84-pro-qmk) on-screen UI:
+black panels, amber accent, Rajdhani and Share Tech Mono, square keycaps and a numbered side menu.
+
+Armed is the default theme; the stock Vial themes are still under **Theme**. Mockups live in [`design/`](design/).
+
+---
+
 
 # Docs and getting started
 

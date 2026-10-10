@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 import logging
 import platform
+import struct
 from json import JSONDecodeError
 
 from PyQt5.QtCore import Qt, QSettings, QStandardPaths, QTimer, QRect, QT_VERSION_STR
@@ -31,7 +32,9 @@ from unlocker import Unlocker
 from util import tr, EXAMPLE_KEYBOARDS, KeycodeDisplay, EXAMPLE_KEYBOARD_PREFIX
 from vial_device import VialKeyboard
 from editor.matrix_test import MatrixTest
+from widgets.side_nav import SideNav
 
+import armed
 import themes
 
 
@@ -43,7 +46,7 @@ class MainWindow(QMainWindow):
 
         self.ui_lock_count = 0
 
-        self.settings = QSettings("Vial", "Vial")
+        self.settings = QSettings("Vial", "Vial Armed")
         if self.settings.value("size", None):
             self.resize(self.settings.value("size"))
         else:
@@ -58,6 +61,7 @@ class MainWindow(QMainWindow):
         if self.settings.value("maximized", False, bool):
             self.showMaximized()
 
+        armed.load_fonts(appctx.get_resource)
         themes.Theme.set_theme(self.get_theme())
 
         self.combobox_devices = QComboBox()
@@ -110,17 +114,21 @@ class MainWindow(QMainWindow):
         self.lbl_no_devices.setTextFormat(Qt.RichText)
         self.lbl_no_devices.setAlignment(Qt.AlignCenter)
 
-        layout = QVBoxLayout()
-        layout.addLayout(layout_combobox)
-        layout.addWidget(self.tabs, 1)
-        layout.addWidget(self.lbl_no_devices)
-        layout.setAlignment(self.lbl_no_devices, Qt.AlignHCenter)
         self.tray_keycodes = TabbedKeycodes()
         self.tray_keycodes.make_tray()
-        layout.addWidget(self.tray_keycodes, 1)
         self.tray_keycodes.hide()
-        w = QWidget()
-        w.setLayout(layout)
+
+        if themes.Theme.is_armed():
+            w = self.build_armed_layout(layout_combobox)
+        else:
+            layout = QVBoxLayout()
+            layout.addLayout(layout_combobox)
+            layout.addWidget(self.tabs, 1)
+            layout.addWidget(self.lbl_no_devices)
+            layout.setAlignment(self.lbl_no_devices, Qt.AlignHCenter)
+            layout.addWidget(self.tray_keycodes, 1)
+            w = QWidget()
+            w.setLayout(layout)
         self.setCentralWidget(w)
 
         self.init_menu()
@@ -149,6 +157,115 @@ class MainWindow(QMainWindow):
         if sys.platform == "emscripten":
             import vialglue
             QTimer.singleShot(100, vialglue.notify_ready)
+
+    def build_armed_layout(self, layout_combobox):
+        self.lbl_no_devices.setObjectName("armedNoDevices")
+
+        logo = QLabel("VIAL")
+        logo.setObjectName("armedLogo")
+        logo_sub = QLabel("ARMED")
+        logo_sub.setObjectName("armedLogoSub")
+        self.lbl_status = QLabel()
+        self.lbl_status.setObjectName("armedStatus")
+        self.lbl_lock = QLabel()
+        self.lbl_lock.setObjectName("armedLock")
+
+        top_layout = QHBoxLayout()
+        top_layout.setContentsMargins(16, 6, 16, 6)
+        top_layout.setSpacing(18)
+        top_layout.addWidget(logo)
+        top_layout.addSpacing(-10)
+        top_layout.addWidget(logo_sub)
+        top_layout.addWidget(self.combobox_devices, 1)
+        top_layout.addStretch(1)
+        top_layout.addWidget(self.lbl_status)
+        top_layout.addWidget(self.lbl_lock)
+        if sys.platform != "emscripten":
+            top_layout.addWidget(self.btn_refresh_devices)
+        top = QWidget()
+        top.setObjectName("armedTop")
+        top.setAttribute(Qt.WA_StyledBackground)
+        top.setLayout(top_layout)
+
+        self.tabs.setObjectName("armedMain")
+        self.tabs.tabBar().hide()
+        self.nav = SideNav(self.tabs)
+        self.nav.sync()
+
+        self.lbl_crumb = QLabel()
+        self.lbl_crumb.setObjectName("armedCrumb")
+        self.tabs.currentChanged.connect(self.update_crumb)
+        self.update_crumb()
+
+        content = QVBoxLayout()
+        content.setContentsMargins(18, 10, 18, 14)
+        content.addWidget(self.lbl_crumb)
+        content.addWidget(self.tabs, 1)
+        content.addWidget(self.lbl_no_devices)
+        content.setAlignment(self.lbl_no_devices, Qt.AlignHCenter)
+        content.addWidget(self.tray_keycodes, 1)
+
+        middle = QHBoxLayout()
+        middle.setContentsMargins(0, 0, 0, 0)
+        middle.setSpacing(0)
+        middle.addWidget(self.nav)
+        middle.addLayout(content, 1)
+
+        self.lbl_foot = QLabel()
+        foot_acc = QLabel("\u25cf LIVE")
+        foot_acc.setObjectName("armedFootAcc")
+        foot_layout = QHBoxLayout()
+        foot_layout.setContentsMargins(16, 6, 16, 6)
+        foot_layout.addWidget(self.lbl_foot)
+        foot_layout.addStretch(1)
+        foot_layout.addWidget(foot_acc)
+        self.foot = QWidget()
+        self.foot.setObjectName("armedFoot")
+        self.foot.setAttribute(Qt.WA_StyledBackground)
+        self.foot.setLayout(foot_layout)
+        self.foot_acc = foot_acc
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(top)
+        layout.addLayout(middle, 1)
+        layout.addWidget(self.foot)
+        w = QWidget()
+        w.setLayout(layout)
+        self.update_armed_status()
+        return w
+
+    def update_crumb(self):
+        idx = self.tabs.currentIndex()
+        title = self.tabs.tabText(idx).upper() if idx >= 0 else ""
+        self.lbl_crumb.setText('<span style="color:{}">{}</span>'.format(armed.ACC, title))
+        self.lbl_crumb.setVisible(idx >= 0 and self.tabs.isVisible())
+
+    def update_armed_status(self):
+        if not themes.Theme.is_armed():
+            return
+        dev = self.autorefresh.current_device if hasattr(self, "autorefresh") else None
+        vial = isinstance(dev, VialKeyboard)
+        if dev is None:
+            self.lbl_status.setText('<span style="color:{}">\u25a0</span> NO DEVICE'.format(armed.LINE2))
+        else:
+            self.lbl_status.setText('<span style="color:{}">\u25a0</span> USB LINKED'.format(armed.OK))
+        self.lbl_lock.setVisible(vial)
+        self.foot_acc.setVisible(dev is not None)
+        foot = ""
+        if vial:
+            kb = dev.keyboard
+            unlocked = bool(kb.get_unlock_status(retries=1))
+            self.lbl_lock.setText("\u25a1 UNLOCKED" if unlocked else "\u25a0 LOCKED")
+            self.lbl_lock.setProperty("unlocked", unlocked)
+            self.lbl_lock.style().unpolish(self.lbl_lock)
+            self.lbl_lock.style().polish(self.lbl_lock)
+            uid = struct.pack("<Q", kb.keyboard_id & 0xFFFFFFFFFFFFFFFF).hex().upper()
+            foot = "VIAL PROTO {} \u00b7 {} LAYERS \u00b7 UID {}".format(kb.vial_protocol, kb.layers, uid)
+        elif dev is not None:
+            foot = dev.title().upper()
+        self.lbl_foot.setText(foot)
 
     def init_menu(self):
         layout_load_act = QAction(tr("MenuFile", "Load saved layout..."), self)
@@ -302,6 +419,9 @@ class MainWindow(QMainWindow):
         else:
             self.lbl_no_devices.show()
             self.tabs.hide()
+        if hasattr(self, "nav"):
+            self.nav.setVisible(bool(devices))
+            self.lbl_crumb.setVisible(bool(devices))
 
         if hard_refresh:
             self.on_device_selected()
@@ -340,6 +460,7 @@ class MainWindow(QMainWindow):
                   self.tap_dance, self.combos, self.key_override, self.alt_repeat_key,
                   self.qmk_settings, self.matrix_tester, self.rgb_configurator]:
             e.rebuild(self.autorefresh.current_device)
+        self.update_armed_status()
 
     def refresh_tabs(self):
         self.tabs.clear()
@@ -349,6 +470,8 @@ class MainWindow(QMainWindow):
 
             c = EditorContainer(container)
             self.tabs.addTab(c, tr("MainWindow", lbl))
+        if hasattr(self, "nav"):
+            self.nav.sync()
 
     def load_via_stack_json(self):
         from urllib.request import urlopen
@@ -399,10 +522,12 @@ class MainWindow(QMainWindow):
     def unlock_keyboard(self):
         if isinstance(self.autorefresh.current_device, VialKeyboard):
             Unlocker.unlock(self.autorefresh.current_device.keyboard)
+            self.update_armed_status()
 
     def lock_keyboard(self):
         if isinstance(self.autorefresh.current_device, VialKeyboard):
             self.autorefresh.current_device.keyboard.lock()
+            self.update_armed_status()
 
     def reboot_to_bootloader(self):
         if isinstance(self.autorefresh.current_device, VialKeyboard):
@@ -414,7 +539,7 @@ class MainWindow(QMainWindow):
         KeycodeDisplay.set_keymap_override(KEYMAPS[index][1])
 
     def get_theme(self):
-        return self.settings.value("theme", "Dark")
+        return self.settings.value("theme", "Armed")
 
     def set_theme(self, theme):
         themes.Theme.set_theme(theme)

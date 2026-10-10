@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from PyQt5.QtGui import QPainter, QColor, QPainterPath, QTransform, QBrush, QPolygonF, QPalette
+from PyQt5.QtGui import QPainter, QColor, QPainterPath, QTransform, QBrush, QPolygonF, QPalette, QPen, QFont, QFontMetrics
 from PyQt5.QtWidgets import QWidget, QToolTip, QApplication
 from PyQt5.QtCore import Qt, QSize, QRect, QPointF, pyqtSignal, QEvent, QRectF
 
@@ -8,6 +8,7 @@ from constants import KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_WIDGET_PADDING
     KEYBOARD_WIDGET_MASK_HEIGHT, KEY_ROUNDNESS, SHADOW_SIDE_PADDING, SHADOW_TOP_PADDING, SHADOW_BOTTOM_PADDING, \
     KEYBOARD_WIDGET_NONMASK_PADDING
 from themes import Theme
+import armed
 
 
 class KeyWidget:
@@ -77,7 +78,7 @@ class KeyWidget:
             self.polygon = QPolygonF(self.bbox + [self.bbox[0]])
             self.polygon2 = QPolygonF(self.bbox2 + [self.bbox2[0]])
             self.polygon = self.polygon.united(self.polygon2)
-            self.corner = self.size * KEY_ROUNDNESS
+            self.corner = 0 if Theme.is_armed() else self.size * KEY_ROUNDNESS
             self.background_draw_path = self.calculate_background_draw_path()
             self.foreground_draw_path = self.calculate_foreground_draw_path()
             self.extra_draw_path = self.calculate_extra_draw_path()
@@ -359,10 +360,102 @@ class KeyboardWidget(QWidget):
         self.update()
         self.updateGeometry()
 
+    @staticmethod
+    def fit_font(font, text, width):
+        """ Shrinks the font until the widest word of the legend fits """
+        f = QFont(font)
+        for _ in range(4):
+            fm = QFontMetrics(f)
+            if max((fm.width(w) for w in text.split()), default=0) <= width:
+                break
+            if f.pixelSize() > 0:
+                f.setPixelSize(max(1, round(f.pixelSize() * 0.88)))
+            else:
+                f.setPointSizeF(f.pointSizeF() * 0.88)
+        return f
+
+    def paint_armed(self, qp):
+        line_pen = QPen(QColor(armed.LINE2))
+        line_pen.setCosmetic(True)
+        active_pen = QPen(QColor(armed.ACC))
+        active_pen.setCosmetic(True)
+        active_pen.setWidthF(2)
+        txt, dim, black = QColor(armed.TXT), QColor(armed.LINE2), QColor(armed.BG)
+        key_brush = QBrush(QColor(armed.KEY))
+        sel_brush = QBrush(QColor(armed.ACC_BG))
+        on_brush = QBrush(QColor(armed.ACC_D))
+        pressed_brush = QBrush(QColor(armed.ACC))
+        mask_brush = QBrush(QColor(armed.PANEL2))
+
+        font = qp.font()
+        mask_font = qp.font()
+        if font.pixelSize() > 0:
+            mask_font.setPixelSize(round(font.pixelSize() * 0.8))
+        else:
+            mask_font.setPointSizeF(font.pointSizeF() * 0.8)
+
+        for key in self.widgets:
+            qp.save()
+            qp.scale(self.scale, self.scale)
+            qp.translate(key.shift_x, key.shift_y)
+            qp.translate(key.rotation_x, key.rotation_y)
+            qp.rotate(key.rotation_angle)
+            qp.translate(-key.rotation_x, -key.rotation_y)
+
+            active = key.active or (self.active_key == key and not self.active_mask)
+            brush = key_brush
+            if key.pressed:
+                brush = pressed_brush
+            elif key.on:
+                brush = on_brush
+            elif active:
+                brush = sel_brush
+            qp.setBrush(brush)
+            qp.setPen(active_pen if active else line_pen)
+            qp.drawPath(key.background_draw_path)
+
+            if key.pressed:
+                pen = black
+            elif key.text == "\u25bd":
+                pen = dim
+            else:
+                pen = key.color if key.color else (QColor(armed.ACC) if active else txt)
+            pad = round(key.size * 0.12)
+
+            if key.masked:
+                qp.setFont(mask_font)
+                qp.setPen(pen)
+                qp.drawText(key.nonmask_rect.adjusted(pad, 0, -pad, 0), Qt.AlignTop | Qt.AlignLeft, key.text)
+                mask_active = self.active_key == key and self.active_mask
+                qp.setPen(active_pen if mask_active else line_pen)
+                qp.setBrush(sel_brush if mask_active else mask_brush)
+                qp.drawRect(key.mask_rect)
+                qp.setPen(key.mask_color if key.mask_color else (QColor(armed.ACC) if mask_active else txt))
+                qp.drawText(key.mask_rect, Qt.AlignCenter, key.mask_text)
+            elif isinstance(key, EncoderWidget):
+                qp.setFont(mask_font)
+                qp.setPen(pen)
+                qp.drawText(key.rect, Qt.AlignCenter, key.text)
+            else:
+                r = key.rect.adjusted(pad, pad, -pad, -pad)
+                qp.setFont(self.fit_font(font, key.text, r.width()))
+                qp.setPen(pen)
+                qp.drawText(r, Qt.AlignTop | Qt.AlignLeft | Qt.TextWordWrap, key.text)
+
+            qp.setPen(Qt.NoPen)
+            qp.setBrush(QBrush(QColor(armed.ACC if active else armed.MID)))
+            qp.drawPath(key.extra_draw_path)
+            qp.restore()
+
     def paintEvent(self, event):
         qp = QPainter()
         qp.begin(self)
         qp.setRenderHint(QPainter.Antialiasing)
+
+        if Theme.is_armed():
+            self.paint_armed(qp)
+            qp.end()
+            return
 
         # for regular keycaps
         regular_pen = qp.pen()

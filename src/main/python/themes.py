@@ -3,7 +3,22 @@
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QPalette, QColor
 
+import armed
+
+
+def _roles(colors):
+    out = {}
+    for name, c in colors.items():
+        if "." in name:
+            group, role = name.split(".")
+            out[(getattr(QPalette, group), getattr(QPalette, role))] = c
+        else:
+            out[getattr(QPalette, name)] = c
+    return out
+
+
 themes = [
+    ("Armed", _roles(armed.palette)),
     ("Light", {
         QPalette.Window: "#ffefebe7",
         QPalette.WindowText: "#ff000000",
@@ -247,12 +262,17 @@ class Theme:
         if theme in palettes:
             QApplication.setPalette(palettes[theme])
             QApplication.setStyle("Fusion")
+        QApplication.instance().setStyleSheet(armed.stylesheet() if cls.is_armed() else "")
         # For default/system theme, do nothing
         # User will have to restart the application for it to be applied
 
     @classmethod
     def get_theme(cls):
         return cls.theme
+
+    @classmethod
+    def is_armed(cls):
+        return cls.theme == "Armed"
 
     @classmethod
     def mask_light_factor(cls):

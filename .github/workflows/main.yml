@@ -80,6 +80,17 @@ jobs:
         Start-Process -FilePath "vcredist_x64.exe" -ArgumentList "/install", "/quiet", "/norestart" -Wait
         Remove-Item "vcredist_x64.exe"
 
+    # fbs bundles msvcr110.dll / msvcp110.dll, which newer runner images no longer ship
+    - name: Install Visual C++ 2012 Redistributable
+      run: |
+        Invoke-WebRequest -Uri "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe" -OutFile "vcredist2012_x64.exe"
+        if ((Get-FileHash vcredist2012_x64.exe -Algorithm sha256).Hash -ne "681be3e5ba9fd3da02c09d7e565adfa078640ed66a0d58583efad2c1e3cc4064") { Write-Error 'SHA256 mismatch' }
+        Start-Process -FilePath "vcredist2012_x64.exe" -ArgumentList "/install", "/quiet", "/norestart" -Wait
+        Remove-Item "vcredist2012_x64.exe"
+        foreach ($dll in "msvcr110.dll", "msvcp110.dll") {
+          if (-not (Test-Path "$env:SystemRoot\System32\$dll")) { Write-Error "$dll is missing" }
+        }
+
     - name: Build
       run: |
         . .\venv\Scripts\activate.ps1

@@ -101,3 +101,29 @@ jobs:
       with:
         name: vial-win-installer
         path: target\VialSetup.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-linux, build-mac, build-win]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        path: dist
+
+    - name: Name the files
+      run: |
+        mkdir out
+        mv dist/vial-linux/Vial-x86_64.AppImage out/Vial-Armed-x86_64.AppImage
+        mv dist/vial-mac/vial-mac.dmg out/Vial-Armed-mac.dmg
+        mv dist/vial-win/vial-win.zip out/Vial-Armed-win.zip
+        mv dist/vial-win-installer/VialSetup.exe out/Vial-Armed-setup.exe
+        ls -l out
+
+    - uses: softprops/action-gh-release@v2
+      with:
+        files: out/*
+        generate_release_notes: true

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IO//84 Vial — mockups</title>
+<style>
+@font-face { font-family: "STM"; src: url("fonts/ShareTechMono-Regular.ttf"); }
+@font-face { font-family: "Raj"; src: url("fonts/Rajdhani-Bold.ttf"); font-weight: 700; }
+
+:root {
+  --bg: #000;
+  --desk: #1b1c1e;
+  --panel: #0a0a0a;
+  --panel2: #111;
+  --line: #2a2a2a;
+  --line2: #3a3a3a;
+  --dim: #5c5c5c;
+  --mid: #8f8f8f;
+  --txt: #dcdcdc;
+  --acc: #ffaa00;
+  --acc-d: #6b4700;
+  --acc-bg: #1a1100;
+  --ok: #2fd05a;
+  --warn: #ff3b2f;
+  --u: 54px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--desk); color: var(--txt); font: 14px/1.2 "STM", monospace; letter-spacing: .06em; padding: 24px; }
+body.single { padding: 0; background: var(--bg); }
+
+.screen { width: 1280px; height: 800px; background: var(--bg); border: 1px solid var(--line2); position: relative; overflow: hidden; display: grid; grid-template-rows: 44px 1fr 30px; margin-bottom: 8px; }
+body.single .screen { border: 0; margin: 0; }
+.caption { color: var(--mid); font-size: 12px; margin: 0 0 28px 2px; }
+.caption b { color: var(--txt); font-weight: normal; }
+body.single .caption { display: none; }
+
+/* title bar */
+.top { display: flex; align-items: center; gap: 18px; padding: 0 16px; border-bottom: 1px solid var(--line2); }
+.logo { font-size: 22px; color: var(--acc); }
+.logo span { color: var(--mid); margin-left: 8px; }
+.dev { border: 1px solid var(--line2); padding: 5px 30px 5px 10px; color: var(--txt); position: relative; }
+.dev::after { content: "v"; position: absolute; right: 10px; color: var(--acc); }
+.dev small { color: var(--dim); margin-left: 10px; }
+.top .sp { flex: 1; }
+.led { display: inline-block; width: 9px; height: 9px; background: var(--ok); margin-right: 8px; vertical-align: 1px; }
+.led.off { background: var(--line2); }
+.led.acc { background: var(--acc); }
+.led.red { background: var(--warn); }
+.lock { border: 1px solid var(--line2); padding: 5px 10px; color: var(--mid); }
+.lock.open { color: var(--acc); border-color: var(--acc-d); }
+.btn { white-space: nowrap; border: 1px solid var(--line2); padding: 5px 12px; color: var(--txt); background: var(--panel); }
+.btn.acc { border-color: var(--acc); color: var(--acc); }
+.btn.dim { color: var(--dim); }
+
+/* body */
+.main { display: grid; grid-template-columns: 214px minmax(0, 1fr); min-height: 0; }
+.nav { border-right: 1px solid var(--line2); padding: 10px 0; display: flex; flex-direction: column; }
+.nav .it { display: flex; gap: 12px; align-items: baseline; padding: 9px 14px 9px 18px; margin: 1px 8px; border: 1px solid transparent; font: 700 17px "Raj"; letter-spacing: .1em; color: var(--txt); }
+.nav .it i { font: normal 12px "STM"; color: var(--dim); font-style: normal; }
+.nav .it.sel { border-color: var(--acc); color: var(--acc); box-shadow: inset 4px 0 0 var(--acc); }
+.nav .it.sel i { color: var(--acc); }
+.nav .it.own { color: var(--txt); }
+.nav .sep { border-top: 1px solid var(--line); margin: 8px 18px; }
+.nav .grow { flex: 1; }
+.nav .info { padding: 0 18px; color: var(--dim); font-size: 11px; line-height: 1.7; }
+.nav .info b { color: var(--mid); font-weight: normal; }
+
+.content { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.crumb { display: flex; align-items: center; gap: 14px; height: 30px; }
+.crumb h1 { font: 700 22px "Raj"; letter-spacing: .12em; color: var(--mid); font-weight: 700; }
+.crumb h1 em { font-style: normal; color: var(--acc); }
+.crumb .sp { flex: 1; }
+
+.chips { display: flex; gap: 6px; }
+.chip { border: 1px solid var(--line2); padding: 4px 10px; color: var(--mid); background: var(--panel); }
+.chip.sel { border-color: var(--acc); color: var(--acc); background: var(--acc-bg); }
+.chip b { color: var(--txt); font-weight: normal; }
+.chip.sel b { color: var(--acc); }
+
+/* bracket frame */
+.frame { position: relative; border: 1px solid var(--line); background: var(--panel); }
+.frame::before, .frame::after, .frame > .br::before, .frame > .br::after { content: ""; position: absolute; width: 12px; height: 12px; border: 0 solid var(--mid); }
+.frame::before { left: -5px; top: -5px; border-left-width: 2px; border-top-width: 2px; }
+.frame::after { right: -5px; top: -5px; border-right-width: 2px; border-top-width: 2px; }
+.frame > .br::before { left: -5px; bottom: -5px; border-left-width: 2px; border-bottom-width: 2px; }
+.frame > .br::after { right: -5px; bottom: -5px; border-right-width: 2px; border-bottom-width: 2px; }
+.frame.acc::before, .frame.acc::after, .frame.acc > .br::before, .frame.acc > .br::after { border-color: var(--acc); }
+.frame.red { border-color: var(--warn); }
+.frame.red::before, .frame.red::after, .frame.red > .br::before, .frame.red > .br::after { border-color: var(--warn); }
+
+/* keyboard */
+.kbwrap { padding: 22px 0 18px; display: flex; justify-content: center; }
+.kb { position: relative; }
+.key { position: absolute; border: 1px solid var(--line2); background: #070707; padding: 5px 6px; overflow: hidden; }
+.key .l { color: var(--txt); font-size: 13px; white-space: pre; line-height: 1.15; }
+.key .s { position: absolute; left: 6px; bottom: 4px; color: var(--dim); font-size: 10px; }
+.key.trans .l { color: var(--line2); }
+.key.own { border-color: #4a3a12; }
+.key.own .l { color: var(--acc); }
+.key.sel { border: 2px solid var(--acc); background: var(--acc-bg); box-shadow: 0 0 0 3px rgba(255,170,0,.15); }
+.key.sel .l { color: var(--acc); }
+.key.hl { border-color: var(--acc); }
+.key.hl .l { color: var(--acc); }
+.key.press { background: var(--acc); border-color: var(--acc); }
+.key.press .l, .key.press .s { color: #000; }
+.key.knob { border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; }
+.key.knob .l { font-size: 10px; text-align: center; }
+
+.kinfo { display: flex; align-items: center; gap: 14px; height: 38px; padding: 0 12px; border: 1px solid var(--line); background: var(--panel); }
+.kinfo .k { color: var(--dim); }
+.kinfo .v { color: var(--acc); font-size: 16px; }
+.kinfo .sp { flex: 1; }
+
+/* palette */
+.pal { flex: 1; min-height: 0; border: 1px solid var(--line); display: flex; flex-direction: column; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs div { padding: 8px 13px; color: var(--dim); border-right: 1px solid var(--line); font-size: 13px; }
+.tabs div.sel { color: var(--acc); background: var(--acc-bg); box-shadow: inset 0 -2px 0 var(--acc); }
+.tabs .search { margin-left: auto; border-left: 1px solid var(--line); border-right: 0; color: var(--dim); min-width: 200px; }
+.grid { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; align-content: flex-start; }
+.kc { width: 64px; height: 42px; border: 1px solid var(--line2); background: #070707; padding: 4px 6px; font-size: 12px; color: var(--txt); white-space: pre; line-height: 1.15; }
+.kc.w { width: 145px; }
+.kc.acc { border-color: var(--acc); color: var(--acc); background: var(--acc-bg); }
+.kc.gap { width: 18px; border: 0; background: none; }
+.grp { width: 100%; color: var(--dim); font-size: 11px; padding: 6px 0 1px; }
+
+/* footer */
+.foot { display: flex; align-items: center; gap: 26px; padding: 0 16px; border-top: 1px solid var(--line2); color: var(--dim); font-size: 13px; }
+.foot b { color: var(--txt); font-weight: normal; }
+.foot .sp { flex: 1; }
+.foot .acc { color: var(--acc); }
+
+/* cards (device page) */
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 18px; flex: 1; min-height: 0; padding: 6px 4px 4px; }
+.card { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { font: 700 18px "Raj"; letter-spacing: .14em; color: var(--txt); display: flex; justify-content: space-between; align-items: baseline; }
+.card h2 i { font: normal 12px "STM"; color: var(--dim); font-style: normal; }
+.row { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+.row .k { color: var(--mid); width: 92px; flex: none; }
+.row .v { color: var(--txt); }
+.row .v.acc { color: var(--acc); }
+.big { font: 700 46px/1 "Raj"; letter-spacing: .06em; color: var(--acc); }
+.big.off { color: var(--dim); }
+.seg { display: flex; border: 1px solid var(--line2); }
+.seg div { padding: 4px 9px; color: var(--mid); border-right: 1px solid var(--line2); }
+.seg div:last-child { border-right: 0; }
+.seg div.sel { background: var(--acc); color: #000; }
+.sw { width: 18px; height: 18px; border: 1px solid var(--line2); display: inline-block; }
+.sw.sel { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sws { display: flex; gap: 7px; flex-wrap: wrap; }
+.tog { width: 44px; height: 20px; border: 1px solid var(--line2); position: relative; }
+.tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: var(--dim); }
+.tog.on { border-color: var(--acc); }
+.tog.on::after { left: calc(100% - 15px); background: var(--acc); }
+.bar { display: flex; gap: 3px; }
+.bar i { width: 10px; height: 16px; background: var(--acc); }
+.bar i.o { background: var(--line2); }
+.strip { display: flex; gap: 6px; }
+.strip i { width: 24px; height: 8px; background: var(--line); }
+.strip i.on { background: var(--acc); box-shadow: 0 0 8px rgba(255,170,0,.6); }
+.hint { color: var(--dim); font-size: 12px; }
+.kcap { border: 1px solid var(--acc); color: var(--acc); padding: 3px 9px; }
+.kcap.d { border-color: var(--line2); color: var(--dim); }
+.slot { width: 38px; height: 30px; border: 1px solid var(--line2); display: flex; align-items: center; justify-content: center; color: var(--mid); }
+.slot.sel { border-color: var(--acc); color: var(--acc); background: var(--acc-bg); }
+.slot.paired { color: var(--txt); }
+
+/* lighting page */
+.split { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 18px; flex: 1; min-height: 0; }
+.list { border: 1px solid var(--line); overflow: hidden; padding: 6px 0; position: relative; }
+.list .it { display: flex; gap: 12px; padding: 6px 14px; margin: 0 6px; border: 1px solid transparent; font: 700 17px "Raj"; letter-spacing: .1em; }
+.list .it i { font: normal 12px "STM"; color: var(--dim); font-style: normal; width: 20px; }
+.list .it.sel { border-color: var(--acc); color: var(--acc); box-shadow: inset 4px 0 0 var(--acc); }
+.list .it.two::after { content: "2C"; margin-left: auto; font: normal 11px "STM"; color: var(--acc); border: 1px solid var(--acc-d); padding: 1px 4px; align-self: center; }
+.list .sb { position: absolute; right: 3px; top: 40px; width: 3px; height: 120px; background: var(--line2); }
+.right { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.ctl .frame { padding: 12px 16px; display: flex; flex-direction: column; gap: 9px; }
+.ctl h2 { font: 700 17px "Raj"; letter-spacing: .14em; display: flex; gap: 10px; align-items: center; }
+.ctl h2 .sw { width: 22px; height: 16px; }
+.slider { display: flex; align-items: center; gap: 12px; }
+.slider .k { width: 46px; color: var(--mid); }
+.slider .t { flex: 1; height: 14px; position: relative; border: 1px solid var(--line2); }
+.slider .t .f { position: absolute; inset: 2px auto 2px 2px; background: var(--acc); }
+.slider .t.hue { background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); border: 0; }
+.slider .t .m { position: absolute; top: -4px; width: 4px; height: 20px; background: #fff; outline: 2px solid #000; }
+.slider .n { width: 38px; text-align: right; color: var(--txt); }
+
+/* modal */
+.shade { position: absolute; inset: 44px 0 30px 0; background: rgba(0,0,0,.72); display: flex; align-items: center; justify-content: center; }
+.modal { width: 600px; padding: 26px 30px; background: #000; display: flex; flex-direction: column; gap: 16px; }
+.modal h3 { font: 700 30px "Raj"; letter-spacing: .1em; color: var(--acc); }
+.modal.danger h3 { color: var(--warn); }
+.modal p { color: var(--mid); font-size: 15px; line-height: 1.5; }
+.modal p b { color: var(--txt); font-weight: normal; }
+.modal .act { display: flex; gap: 40px; font-size: 16px; }
+.modal .act span { color: var(--dim); }
+.modal .act span:first-child { color: var(--txt); }
+.prog { display: flex; gap: 4px; }
+.prog i { flex: 1; height: 14px; background: var(--acc); }
+.prog i.o { background: var(--line); }
+</style>
+</head>
+<body>
+
+<!-- 1. KEYMAP -->
+<section id="keymap">
+<div class="screen">
+  <div class="top" data-top></div>
+  <div class="main">
+    <div class="nav" data-nav="KEYMAP"></div>
+    <div class="content">
+      <div class="crumb">
+        <h1>KEYMAP / <em>LAYER 1 · FN</em></h1>
+        <div class="chips">
+          <div class="chip">0 <b>BASE</b></div>
+          <div class="chip sel">1 <b>FN</b></div>
+          <div class="chip">2</div>
+          <div class="chip">3</div>
+        </div>
+        <div class="sp"></div>
+        <div class="btn dim">LOAD</div>
+        <div class="btn dim">SAVE FILE</div>
+      </div>
+      <div class="frame kbwrap"><span class="br"></span><div class="kb" data-kb="fn" data-sel="S"></div></div>
+      <div class="kinfo">
+        <span class="k">KEY</span><span>[3,2] S</span>
+        <span class="k">→</span><span class="v">SLEEP_T</span>
+        <span class="k">AUTO-SLEEP TIMER · USER 6</span>
+        <span class="sp"></span>
+        <div class="btn dim">MOD-TAP</div>
+        <div class="btn dim">LAYER-TAP</div>
+        <div class="btn">ANY KEYCODE…</div>
+      </div>
+      <div class="pal">
+        <div class="tabs">
+          <div>BASIC</div><div>ISO/JIS</div><div>LAYERS</div><div>QUANTUM</div><div>LIGHTING</div><div>MEDIA</div><div>TAP DANCE</div><div class="sel">IO/84</div><div>MACRO</div>
+          <div class="search">FIND KEYCODE_</div>
+        </div>
+        <div class="grid">
+          <div class="grp">WIRELESS</div>
+          <div class="kc">BT 1</div><div class="kc">BT 2</div><div class="kc">BT 3</div><div class="kc">BT 4</div><div class="kc">BT 5</div><div class="kc">2.4G
+PAIR</div>
+          <div class="kc gap"></div>
+          <div class="kc acc">SLEEP
+TIMER</div>
+          <div class="kc gap"></div>
+          <div class="kc">MENU
+UP</div><div class="kc">MENU
+DOWN</div><div class="kc">MENU
+LEFT</div><div class="kc">MENU
+RIGHT</div><div class="kc">MENU
+OK</div><div class="kc">MENU
+BACK</div>
+          <div class="grp">LIGHTING · ON-DEVICE</div>
+          <div class="kc">RGB
+TOG</div><div class="kc">HUE −</div><div class="kc">HUE +</div><div class="kc">SPD −</div><div class="kc">SPD +</div><div class="kc">EFFECT
+NEXT</div><div class="kc">EFFECT
+PREV</div><div class="kc gap"></div><div class="kc">NKRO
+TOG</div><div class="kc">WIN
+LOCK</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot" data-foot="CLICK KEY &nbsp;SELECT|CLICK KEYCODE &nbsp;ASSIGN|RMB &nbsp;CLEAR"></div>
+</div>
+<p class="caption"><b>KEYMAP</b> · layers, live remap · our keycodes get their own <b>IO/84</b> tab instead of "User 0…12"</p>
+</section>
+
+<!-- 2. DEVICE -->
+<section id="device">
+<div class="screen">
+  <div class="top" data-top></div>
+  <div class="main">
+    <div class="nav" data-nav="IO/84 DEVICE"></div>
+    <div class="content">
+      <div class="crumb">
+        <h1>IO/84 / <em>DEVICE</em></h1>
+        <div class="sp"></div>
+        <span class="hint">CHANGES APPLY LIVE · SAVED IN KEYBOARD</span>
+        <div class="btn dim">FACTORY RESET</div>
+      </div>
+      <div class="cards">
+        <div class="frame acc card"><span class="br"></span>
+          <h2>SNAPTAP <i>SOCD</i></h2>
+          <div class="row"><span class="big">ON</span><span class="hint">CASE SWITCH</span></div>
+          <div class="row"><span class="k">MODE</span><div class="seg"><div class="sel">LAST INPUT</div><div>NEUTRAL</div></div></div>
+          <div class="row"><span class="k">PAIRS</span><span class="kcap">A</span><span class="hint">⇄</span><span class="kcap">D</span><span style="width:8px"></span><span class="kcap">W</span><span class="hint">⇄</span><span class="kcap">S</span></div>
+          <div class="row"><span class="k"></span><span class="kcap d">+ PAIR</span><span class="hint">soon</span></div>
+          <div class="hint">LAST: the newest key of a pair wins. NEUTRAL: both held = neither.</div>
+        </div>
+        <div class="frame card"><span class="br"></span>
+          <h2>COLOURS <i>KEYS</i></h2>
+          <div class="row"><span class="k">COLOR 2</span><span class="sw" style="background:#00e0f0"></span><span class="v">CYAN</span></div>
+          <div class="sws" data-sws="5"></div>
+          <div class="row"><span class="k">FN COLOR</span><span class="sw" style="background:#eee"></span><span class="v">WHITE</span></div>
+          <div class="sws" data-sws="9"></div>
+          <div class="hint">COLOR 2 drives the two-colour effects. FN COLOR lights the keys bound on Fn.</div>
+        </div>
+        <div class="frame card"><span class="br"></span>
+          <h2>LIGHT BAR <i>9 LED</i></h2>
+          <div class="strip"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+          <div class="sws" style="gap:5px">
+            <div class="seg"><div class="sel">WPM</div><div>WPM BAR</div><div>BATTERY</div></div>
+            <div class="seg"><div>LINK</div><div>SCANNER</div><div>OFF</div></div>
+          </div>
+          <div class="row"><span class="k">COLOR</span><span class="sw" style="background:var(--acc)"></span><span class="v">AMBER</span></div>
+          <div class="row"><span class="k">CAPS ALERT</span><div class="tog on"></div><span class="hint">blink red while Caps Lock is on</span></div>
+        </div>
+        <div class="frame card"><span class="br"></span>
+          <h2>DISPLAY <i>320×172</i></h2>
+          <div class="row"><span class="k">ACCENT</span>
+            <span class="sw sel" style="background:#ffaa00"></span><span class="sw" style="background:#2fd05a"></span><span class="sw" style="background:#00d8e6"></span><span class="sw" style="background:#ff3b2f"></span><span class="sw" style="background:#eee"></span>
+            <span class="v acc">AMBER</span></div>
+          <div class="row"><span class="k">SCREEN OFF</span><div class="seg"><div>30S</div><div>1M</div><div class="sel">5M</div><div>15M</div><div>NEVER</div></div></div>
+          <div class="row"><span class="k">BRIGHT</span><div class="bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i></div><span class="v">70%</span></div>
+        </div>
+        <div class="frame card"><span class="br"></span>
+          <h2>POWER <i>WIRELESS ONLY</i></h2>
+          <div class="row"><span class="big" style="color:var(--txt)">87%</span><span class="v">4.08V</span><span class="hint"><span class="led acc"></span>CHARGING</span></div>
+          <div class="row"><span class="k">AUTO-SLEEP</span><div class="seg"><div>1M</div><div class="sel">5M</div><div>10M</div><div>30M</div><div>OFF</div></div></div>
+          <div class="hint">Deep sleep in BT / 2.4G. Any key, the knob or a switch wakes it.</div>
+        </div>
+        <div class="frame card"><span class="br"></span>
+          <h2>WIRELESS <i>BT · 2.4G</i></h2>
+          <div class="row"><span class="k">MODE</span><span class="v">USB</span><span class="hint">· rear switch</span></div>
+          <div class="row"><span class="k">BT SLOT</span><div class="slot sel">1</div><div class="slot paired">2</div><div class="slot paired">3</div><div class="slot">4</div><div class="slot">5</div></div>
+          <div class="row"><span class="k"></span><div class="btn dim">PAIR SLOT</div><div class="btn dim">PAIR 2.4G</div></div>
+          <div class="hint">Pairing works in BT / 2.4G mode — Vial sees the keyboard over USB only.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot" data-foot="CLICK &nbsp;CHANGE|VALUES READ FROM KEYBOARD ON CONNECT"></div>
+</div>
+<p class="caption"><b>IO/84 DEVICE</b> · our own tab: everything from the on-screen menu, over Raw HID</p>
+</section>
+
+<!-- 3. LIGHTING -->
+<section id="lighting">
+<div class="screen">
+  <div class="top" data-top></div>
+  <div class="main">
+    <div class="nav" data-nav="LIGHTING"></div>
+    <div class="content">
+      <div class="crumb">
+        <h1>LIGHTING / <em>TWO TONE</em></h1>
+        <div class="sp"></div>
+        <span class="hint">2C = uses COLOR 2</span>
+        <div class="btn">ON</div>
+        <div class="btn acc">SAVE</div>
+      </div>
+      <div class="split">
+        <div class="list">
+          <div class="it"><i>00</i>SOLID</div>
+          <div class="it"><i>01</i>BREATHING</div>
+          <div class="it"><i>02</i>CYCLE ALL</div>
+          <div class="it"><i>03</i>CYCLE LEFT/RIGHT</div>
+          <div class="it"><i>04</i>RAINBOW CHEVRON</div>
+          <div class="it"><i>05</i>REACTIVE</div>
+          <div class="it"><i>06</i>SPLASH</div>
+          <div class="it"><i>07</i>DIGITAL RAIN</div>
+          <div class="it two sel"><i>08</i>TWO TONE</div>
+          <div class="it two"><i>09</i>GRADIENT 2</div>
+          <div class="it two"><i>10</i>CROSSFADE 2</div>
+          <div class="it two"><i>11</i>SCANNER 2</div>
+          <div class="it two"><i>12</i>STARLIGHT 2</div>
+          <div class="it two"><i>13</i>REACTIVE 2</div>
+          <div class="it two"><i>14</i>RIPPLE 2</div>
+          <div class="sb"></div>
+        </div>
+        <div class="right">
+          <div class="ctl">
+            <div class="frame acc"><span class="br"></span>
+              <h2>COLOR <span class="sw" style="background:#ff2a1a"></span><span class="hint">RED</span></h2>
+              <div class="slider"><span class="k">HUE</span><div class="t hue"><div class="m" style="left:1%"></div></div><span class="n">0</span></div>
+              <div class="slider"><span class="k">SAT</span><div class="t"><div class="f" style="width:98%"></div></div><span class="n">255</span></div>
+            </div>
+            <div class="frame"><span class="br"></span>
+              <h2>COLOR 2 <span class="sw" style="background:#00e0f0"></span><span class="hint">CYAN</span></h2>
+              <div class="slider"><span class="k">HUE</span><div class="t hue"><div class="m" style="left:50%"></div></div><span class="n">128</span></div>
+              <div class="slider"><span class="k">SAT</span><div class="t"><div class="f" style="width:98%"></div></div><span class="n">255</span></div>
+            </div>
+          </div>
+          <div class="ctl">
+            <div class="frame"><span class="br"></span>
+              <div class="slider"><span class="k">BRIGHT</span><div class="t"><div class="f" style="width:66%"></div></div><span class="n">66%</span></div>
+              <div class="slider"><span class="k">SPEED</span><div class="t"><div class="f" style="width:40%"></div></div><span class="n">40%</span></div>
+            </div>
+            <div class="frame"><span class="br"></span>
+              <div class="row"><span class="k">FN OVERLAY</span><span class="sw" style="background:#eee"></span><span class="v">WHITE</span></div>
+              <div class="row"><span class="k">LIGHT BAR</span><span class="v">WPM · AMBER</span><span class="hint">→ IO/84</span></div>
+            </div>
+          </div>
+          <div class="frame kbwrap" style="padding:16px 0 12px; --u:38px"><span class="br"></span><div class="kb" data-kb="glow"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot" data-foot="CLICK EFFECT &nbsp;APPLY|DRAG &nbsp;ADJUST|SAVE &nbsp;KEEP AFTER REPLUG"></div>
+</div>
+<p class="caption"><b>LIGHTING</b> · our 7 two-colour effects next to the stock ones, live preview</p>
+</section>
+
+<!-- 4. UNLOCK -->
+<section id="unlock">
+<div class="screen">
+  <div class="top" data-top="locked"></div>
+  <div class="main">
+    <div class="nav" data-nav="QMK SETTINGS"></div>
+    <div class="content">
+      <div class="crumb"><h1>QMK SETTINGS / <em>TAPPING</em></h1></div>
+    </div>
+  </div>
+  <div class="foot" data-foot="ESC &nbsp;CANCEL"></div>
+  <div class="shade">
+    <div class="frame acc modal"><span class="br"></span>
+      <h3>UNLOCK KEYBOARD</h3>
+      <p>This change needs the keyboard unlocked.<br>Hold <b>CAPS</b> + <b>ENTER</b> on the keyboard until the bar fills.</p>
+      <div class="kbwrap" style="padding:4px 0; --u:28px"><div class="kb" data-kb="mini"></div></div>
+      <div class="prog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i class="o"></i><i class="o"></i></div>
+      <div class="act"><span>HOLDING… 58%</span><span>ESC CANCEL</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption"><b>UNLOCK</b> · Caps + Enter, keys and progress mirrored on screen</p>
+</section>
+
+<!-- 5. BOOTLOADER -->
+<section id="danger">
+<div class="screen">
+  <div class="top" data-top></div>
+  <div class="main">
+    <div class="nav" data-nav="IO/84 DEVICE"></div>
+    <div class="content"><div class="crumb"><h1>IO/84 / <em>DEVICE</em></h1></div></div>
+  </div>
+  <div class="foot" data-foot="ENTER &nbsp;CONFIRM|ESC &nbsp;CANCEL"></div>
+  <div class="shade">
+    <div class="frame red modal danger"><span class="br"></span>
+      <h3>ENTER BOOTLOADER?</h3>
+      <p>The keyboard will reset into the Sonix bootloader and stop typing.<br>Flash it with <b>./flash.sh</b>, or replug to get back.</p>
+      <div class="act"><span>ENTER CONFIRM</span><span>ESC CANCEL</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption"><b>SAFE ACTIONS</b> · same red confirm as on the keyboard screen</p>
+</section>
+
+<script>
+const L = [["Esc",0,0,1],["F1",1.25,0,1],["F2",2.25,0,1],["F3",3.25,0,1],["F4",4.25,0,1],["F5",5.5,0,1],["F6",6.5,0,1],["F7",7.5,0,1],["F8",8.5,0,1],["F9",9.75,0,1],["F10",10.75,0,1],["F11",11.75,0,1],["F12",12.75,0,1],["PrtSc",14.25,0,1],["E1",15.75,0,1],["E2",16.75,0,1],["`",0,1.25,1],["1",1,1.25,1],["2",2,1.25,1],["3",3,1.25,1],["4",4,1.25,1],["5",5,1.25,1],["6",6,1.25,1],["7",7,1.25,1],["8",8,1.25,1],["9",9,1.25,1],["0",10,1.25,1],["-",11,1.25,1],["=",12,1.25,1],["Bksp",13,1.25,2],["Ins",15.5,1.25,1],["PgUp",16.5,1.25,1],["Tab",0,2.25,1.5],["Q",1.5,2.25,1],["W",2.5,2.25,1],["E",3.5,2.25,1],["R",4.5,2.25,1],["T",5.5,2.25,1],["Y",6.5,2.25,1],["U",7.5,2.25,1],["I",8.5,2.25,1],["O",9.5,2.25,1],["P",10.5,2.25,1],["[",11.5,2.25,1],["]",12.5,2.25,1],["\\",13.5,2.25,1.5],["Del",15.5,2.25,1],["PgDn",16.5,2.25,1],["Caps",0,3.25,1.75],["A",1.75,3.25,1],["S",2.75,3.25,1],["D",3.75,3.25,1],["F",4.75,3.25,1],["G",5.75,3.25,1],["H",6.75,3.25,1],["J",7.75,3.25,1],["K",8.75,3.25,1],["L",9.75,3.25,1],[";",10.75,3.25,1],["'",11.75,3.25,1],["Enter",12.75,3.25,2.25],["Shift",0,4.25,2.25],["Z",2.25,4.25,1],["X",3.25,4.25,1],["C",4.25,4.25,1],["V",5.25,4.25,1],["B",6.25,4.25,1],["N",7.25,4.25,1],["M",8.25,4.25,1],[",",9.25,4.25,1],[".",10.25,4.25,1],["/",11.25,4.25,1],["Shift ",12.25,4.25,1.75],["↑",15.5,4.25,1],["Ctrl",0,5.25,1.25],["Win",1.25,5.25,1.25],["Alt",2.5,5.25,1.25],["Space",3.75,5.25,6.25],["Alt ",10,5.25,1],["Fn",11,5.25,1],["Ctrl ",12,5.25,1],["←",14.5,5.25,1],["↓",15.5,5.25,1],["→",16.5,5.25,1]];
+
+// Fn layer labels; "!" prefix = our keycode
+const FN = {"F1":"BRI−","F2":"BRI+","F5":"PREV","F6":"PLAY","F7":"NEXT","F9":"MUTE","F10":"VOL−","F11":"VOL+",
+  "1":"!BT 1","2":"!BT 2","3":"!BT 3","4":"!BT 4","5":"!BT 5","6":"!2.4G\nPAIR","PgUp":"HOME","PgDn":"END",
+  "S":"!SLEEP\nTIMER","H":"HUE−","J":"HUE+","K":"SPD−","L":"SPD+","Enter":"!MENU OK","N":"NKRO","↑":"!MENU\n↑",
+  "Ctrl":"!MENU\nBACK","Win":"WIN\nLOCK","Space":"RGB TOG","Ctrl ":"!MENU\nBACK","←":"!MENU\n←","↓":"!MENU\n↓","→":"!MENU\n→","Fn":"▼"};
+const MODS = new Set(["Esc","`","Tab","Caps","Shift","Shift ","Ctrl","Win","Alt","Space","Alt ","Fn","Ctrl ","Bksp","\\","Enter","Ins","PgUp","Del","PgDn","PrtSc","↑","←","↓","→"]);
+
+function kb(el) {
+  const mode = el.dataset.kb, u = parseFloat(getComputedStyle(el).getPropertyValue("--u")), g = Math.max(2, u * .07);
+  let W = 0, H = 0;
+  for (const [lab, x, y, w] of L) {
+    const k = document.createElement("div"), knob = lab === "E1" || lab === "E2";
+    k.className = "key" + (knob ? " knob" : "");
+    k.style.cssText = `left:${x*u}px;top:${y*u}px;width:${w*u-g}px;height:${u-g}px`;
+    let txt = lab, sub = "";
+    if (knob) txt = mode === "fn" ? "PREV\n·\nNEXT" : "VOL−\n·\nVOL+";
+    else if (mode === "fn") {
+      const f = FN[lab];
+      if (f === undefined) { txt = "▽"; k.classList.add("trans"); }
+      else if (f.startsWith("!")) { txt = f.slice(1); k.classList.add("own"); }
+      else txt = f;
+      if (f !== undefined && f !== "▼") sub = lab.trim();
+      if (lab === "Fn") k.classList.add("hl");
+    }
+    if (mode === "glow" && !knob) {
+      const c = MODS.has(lab) ? "#00e0f0" : "#ff2a1a";
+      k.style.borderColor = c; k.style.boxShadow = `inset 0 0 ${u*.35}px ${c}55`;
+      txt = u < 50 ? "" : txt;
+    }
+    if (mode === "mini") { txt = ""; if (lab === "Caps" || lab === "Enter") k.classList.add("press"); }
+    if (el.dataset.sel && lab === el.dataset.sel) k.classList.add("sel");
+    k.innerHTML = `<div class="l">${txt}</div>` + (sub && u > 40 ? `<div class="s">${sub}</div>` : "");
+    el.appendChild(k);
+    W = Math.max(W, (x + w) * u); H = Math.max(H, (y + 1) * u);
+  }
+  el.style.width = W - g + "px"; el.style.height = H - g + "px";
+}
+
+const NAV = [["KEYMAP"],["MACROS"],["LIGHTING"],["TAP DANCE"],["COMBOS"],["OVERRIDES"],["QMK SETTINGS"],["MATRIX TEST"],["-"],["IO/84 DEVICE","own"]];
+function nav(el) {
+  let n = 0, h = "";
+  for (const [t, c] of NAV) {
+    if (t === "-") { h += `<div class="sep"></div>`; continue; }
+    n++;
+    h += `<div class="it ${c||""} ${t === el.dataset.nav ? "sel" : ""}"><i>${String(n).padStart(2,"0")}</i>${t}</div>`;
+  }
+  h += `<div class="grow"></div><div class="info"><b>FW</b> f8b7baa · 2026-10-10<br><b>VIAL</b> PROTO 6 · 4 LAYERS<br><b>UID</b> DCEEE517 44329586</div>`;
+  el.innerHTML = h;
+}
+
+function topbar(el) {
+  const locked = el.dataset.top === "locked";
+  el.innerHTML = `<div class="logo">IO//84<span>VIAL</span></div>
+    <div class="dev">IO TYPE 84 PRO WIRELESS<small>0C45:8009</small></div>
+    <div class="sp"></div>
+    <span><span class="led"></span>USB LINKED</span>
+    <span class="lock ${locked ? "" : "open"}">${locked ? "■ LOCKED" : "□ UNLOCKED"}</span>
+    <div class="btn">REFRESH</div>`;
+}
+
+function foot(el) {
+  el.innerHTML = el.dataset.foot.split("|").map(s => `<span>${s.replace(/^(.*?)\u00a0/, "<b>$1</b> ")}</span>`).join("")
+    + `<span class="sp"></span><span>BAT 87%</span><span class="acc">● LIVE</span>`;
+}
+
+const PAL = ["#ff2a1a","#ff7a00","#ffaa00","#f0e000","#2fd05a","#00e0f0","#2a6bff","#9b4dff","#ff3db5","#eeeeee","#000000"];
+function sws(el) {
+  const sel = +el.dataset.sws;
+  el.innerHTML = PAL.map((c, i) => `<span class="sw ${i === sel ? "sel" : ""}" style="background:${c}"></span>`).join("");
+}
+
+document.querySelectorAll("[data-top]").forEach(topbar);
+document.querySelectorAll("[data-nav]").forEach(nav);
+document.querySelectorAll("[data-foot]").forEach(foot);
+document.querySelectorAll("[data-sws]").forEach(sws);
+document.querySelectorAll("[data-kb]").forEach(kb);
+
+const only = new URLSearchParams(location.search).get("s");
+if (only) {
+  document.body.classList.add("single");
+  document.querySelectorAll("section").forEach(s => { if (s.id !== only) s.remove(); });
+}
+</script>
+</body>
+</html>

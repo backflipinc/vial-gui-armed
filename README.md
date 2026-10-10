@@ -1,31 +1,31 @@
 # Vial Armed
 
-A fork of [vial-gui](https://github.com/vial-kb/vial-gui) for the
-**[IO Type 84 Pro Wireless QMK firmware](https://github.com/backflipinc/io-type84-pro-qmk)**:
-the Hi-Tech / Military Black look of the keyboard's on-screen UI, plus pages for everything the
-firmware can do beyond stock Vial — two-colour effects with a live preview, the Fn overlay colour,
-the light bar and auto-sleep.
+A fork of [vial-gui](https://github.com/vial-kb/vial-gui) for keyboards running
+**[qmk-armed](https://github.com/backflipinc/qmk-armed)**: the Hi-Tech / Military Black look of the
+IO Type 84 Pro's on-screen UI, plus pages for everything the firmware can do beyond stock Vial — every
+RGB Matrix effect with a live preview, two-colour effects, the Fn overlay colour, the light bar and auto-sleep.
 
 ![Lighting](docs/screenshots/lighting.png)
 
 > [!IMPORTANT]
-> For now Vial Armed is tailored to **one keyboard**: the IO by Red Square Type 84 Pro Wireless running
-> the [custom QMK firmware](https://github.com/backflipinc/io-type84-pro-qmk). With any other Vial
-> keyboard it works like regular Vial in the Armed theme — the extra pages only appear when the
-> keyboard answers on the IO84 channel (see [How it works](#how-it-works)).
+> The extra pages need a keyboard flashed with [qmk-armed](https://github.com/backflipinc/qmk-armed). Vial Armed
+> recognises the firmware by its protocol and shows only what that keyboard reports: RGB Matrix effects on any
+> qmk-armed keyboard with per-key RGB, COLOR 2, FN COLOR, the light bar and auto-sleep where the keyboard has them.
+> So far the [IO Type 84 Pro Wireless](https://github.com/backflipinc/qmk-armed/tree/armed/keyboards/io/type84_pro)
+> is the one keyboard that has them all. With any other Vial keyboard it works like regular Vial in the Armed theme.
 
 ## Features
 
 | | |
 |---|---|
 | 🖤 **Armed theme** | Black panels, amber accent, Rajdhani and Share Tech Mono, square keycaps, numbered side menu — the design code of the keyboard's screen. The stock Vial themes are still under **Theme** |
-| 🌈 **Lighting** | Every effect the firmware has, including the 7 **two-colour** ones (TWO TONE, GRADIENT 2, CROSSFADE 2, SCANNER 2, STARLIGHT 2, REACTIVE 2, RIPPLE 2); COLOR and COLOR 2, brightness, speed |
+| 🌈 **Lighting** | Every effect the firmware has, including custom ones — on the IO Type 84 Pro, 7 **two-colour** effects (TWO TONE, GRADIENT 2, CROSSFADE 2, SCANNER 2, STARLIGHT 2, REACTIVE 2, RIPPLE 2); COLOR and COLOR 2, brightness, speed |
 | 👁️ **Live preview** | The selected effect runs on the keyboard layout with the firmware's own maths, LED positions and flags. Reactive effects press keys by themselves; click a key to press it |
 | 🔦 **Fn overlay** | Pick the FN COLOR and hold **HOLD FN** to see which keys light up while Fn is held |
 | 📏 **Light bar** | Mode (WPM, WPM bar, battery, link, scanner, off), colour and Caps Lock alert, with a 9-LED preview |
-| 💤 **Device** | Auto-sleep timer in Bluetooth / 2.4 GHz: 1, 5, 10, 30 min or off |
+| 💤 **Device** | Auto-sleep timer, with the options the keyboard offers |
 | ⌨️ **Everything from Vial** | Keymap and knobs on all layers, macros, tap dance, combos, key overrides, QMK settings, matrix tester |
-| 🧭 **Status** | Link and lock state in the top bar, Vial protocol, layer count and keyboard UID in the footer |
+| 🧭 **Status** | Link and lock state in the top bar, qmk-armed version, Vial protocol, layer count and keyboard UID in the footer |
 
 | Keymap | Device |
 |---|---|
@@ -43,27 +43,32 @@ Download the latest build from [Releases](https://github.com/backflipinc/vial-gu
 | Windows | `Vial-Armed-setup.exe` (installer) or `Vial-Armed-win.zip` (portable) |
 | macOS | `Vial-Armed-mac.dmg` |
 
-On Linux the keyboard needs a udev rule to be reachable without root — the firmware repository ships one:
-[`udev/70-io-type84-pro.rules`](https://github.com/backflipinc/io-type84-pro-qmk/blob/main/udev/70-io-type84-pro.rules).
+On Linux the keyboard needs a udev rule to be reachable without root. For the IO Type 84 Pro, qmk-armed ships one:
+[`70-io-type84-pro.rules`](https://github.com/backflipinc/qmk-armed/blob/armed/keyboards/io/type84_pro/udev/70-io-type84-pro.rules);
+other keyboards can use [Vial's](https://get.vial.today/manual/linux-udev.html).
 
-Set the keyboard's mode switch to **USB**: in Bluetooth / 2.4 GHz modes it is off the USB bus and Vial can't see it.
+On the IO Type 84 Pro, set the mode switch to **USB**: in Bluetooth / 2.4 GHz modes it is off the USB bus and Vial can't see it.
 
 ## How it works
 
 Vial talks to the keyboard over Raw HID. VIA and VialRGB only know QMK's built-in effects and one colour,
-so the firmware adds its own command, **`0x84`** (unused by VIA and Vial), that Vial Armed probes on connect:
+and VialRGB shows custom effects as *Disable*. qmk-armed adds its own command, **`0xAD`** (unused by VIA and Vial),
+that Vial Armed probes on connect:
 
-| Sub-command | |
+| Command | |
 |---|---|
-| `INFO` | `IO84` magic, protocol version, list sizes, maximum brightness |
-| `LIST` | effects (QMK id + name), colour presets, light bar modes, sleep options, LEDs (matrix position, x/y, flags) |
+| `INFO` | `ARMD` magic, protocol and firmware version, **feature flags**, list sizes, maximum brightness |
+| `LIST` | effects (QMK id, flags, name), colour presets, light bar modes, sleep options, LEDs (matrix position, x/y, flags) |
 | `GET` / `SET` | lighting on/off, effect, hue, saturation, brightness, speed, COLOR 2, FN COLOR, light bar mode / colour / Caps alert, auto-sleep |
 | `SAVE` | write hue / saturation / brightness / speed to EEPROM (sliders apply them live without wearing the flash) |
 
-Everything — effect names, colours, LED layout — comes from the keyboard, so the GUI hardcodes nothing
-about it. If the keyboard doesn't answer, Vial Armed falls back to the stock Vial lighting page.
-Implementation: [`protocol/io84.py`](src/main/python/protocol/io84.py) here,
-[`io84_hid.c`](https://github.com/backflipinc/io-type84-pro-qmk/blob/main/keyboards/io/type84_pro/io84_hid.c) in the firmware.
+The feature flags decide what's shown: RGB Matrix opens the Lighting page and replaces the VialRGB one,
+COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page. Effect names, colours
+and the LED layout come from the keyboard too, so the GUI hardcodes nothing about a particular board.
+Without qmk-armed, Vial Armed falls back to the stock Vial lighting page.
+
+Protocol spec and how to add features to a keyboard: [qmk-armed/docs/armed.md](https://github.com/backflipinc/qmk-armed/blob/armed/docs/armed.md).
+Implementation here: [`protocol/qmk_armed.py`](src/main/python/protocol/qmk_armed.py).
 
 ## Development
 

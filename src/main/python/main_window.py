@@ -28,6 +28,7 @@ from editor.qmk_settings import QmkSettings
 from editor.rgb_configurator import RGBConfigurator
 from editor.armed_lighting import ArmedLighting
 from editor.armed_device import ArmedDevice
+from editor.armed_screen import ArmedScreen
 from tabbed_keycodes import TabbedKeycodes
 from editor.tap_dance import TapDance
 from unlocker import Unlocker
@@ -93,9 +94,10 @@ class MainWindow(QMainWindow):
         self.rgb_configurator = RGBConfigurator()
         self.armed_lighting = ArmedLighting(self.layout_editor)
         self.armed_device = ArmedDevice()
+        self.armed_screen = ArmedScreen()
 
         self.editors = [(self.keymap_editor, "Keymap"), (self.layout_editor, "Layout"), (self.macro_recorder, "Macros"),
-                        (self.rgb_configurator, "Lighting"), (self.armed_lighting, "Lighting"),
+                        (self.rgb_configurator, "Lighting"), (self.armed_lighting, "Lighting"), (self.armed_screen, "Screen"),
                         (self.tap_dance, "Tap Dance"), (self.combos, "Combos"),
                         (self.key_override, "Key Overrides"), (self.alt_repeat_key, "Alt Repeat Key"),
                         (self.qmk_settings, "QMK Settings"), (self.matrix_tester, "Matrix tester"),
@@ -466,7 +468,7 @@ class MainWindow(QMainWindow):
         for e in [self.layout_editor, self.keymap_editor, self.firmware_flasher, self.macro_recorder,
                   self.tap_dance, self.combos, self.key_override, self.alt_repeat_key,
                   self.qmk_settings, self.matrix_tester, self.rgb_configurator, self.armed_lighting,
-                  self.armed_device]:
+                  self.armed_device, self.armed_screen]:
             e.rebuild(self.autorefresh.current_device)
         self.update_armed_status()
 
@@ -555,6 +557,20 @@ class MainWindow(QMainWindow):
         msg = QMessageBox()
         msg.setText(tr("MainWindow", "In order to fully apply the theme you should restart the application."))
         msg.exec_()
+
+    def set_busy(self, busy):
+        """ A page talks to the keyboard in the background: keep the other pages (and their requests) away.
+            Unlike lock_ui() the page itself stays usable, e.g. for its CANCEL button """
+        if busy:
+            self.autorefresh._lock()
+        else:
+            self.autorefresh._unlock()
+        self.combobox_devices.setEnabled(not busy)
+        self.btn_refresh_devices.setEnabled(not busy)
+        self.tabs.tabBar().setEnabled(not busy)
+        if hasattr(self, "nav"):
+            self.nav.setEnabled(not busy)
+        self.menuBar().setEnabled(not busy)
 
     def on_tab_changed(self, index):
         TabbedKeycodes.close_tray()

@@ -3,7 +3,8 @@
 A fork of [vial-gui](https://github.com/vial-kb/vial-gui) for keyboards running
 **[qmk-armed](https://github.com/backflipinc/qmk-armed)**: the Hi-Tech / Military Black look of the
 IO Type 84 Pro's on-screen UI, plus pages for everything the firmware can do beyond stock Vial — every
-RGB Matrix effect with a live preview, two-colour effects, the Fn overlay colour, the light bar and auto-sleep.
+RGB Matrix effect with a live preview, two-colour effects, the Fn overlay colour, the light bar, auto-sleep and your
+own picture, GIF or video on the keyboard's screen.
 
 ![Lighting](docs/screenshots/lighting.png)
 
@@ -24,12 +25,17 @@ RGB Matrix effect with a live preview, two-colour effects, the Fn overlay colour
 | 🔦 **Fn overlay** | Pick the FN COLOR and hold **HOLD FN** to see which keys light up while Fn is held |
 | 📏 **Light bar** | Mode (WPM, WPM bar, battery, link, scanner, off), colour and Caps Lock alert, with a 9-LED preview |
 | 💤 **Device** | Auto-sleep timer, with the options the keyboard offers |
+| 🎞️ **Screen** | Put a picture, GIF or video (with ffmpeg installed) on the keyboard's screen: fit, frame rate, slideshow, a preview of exactly what gets uploaded, progress with time left. Switch the main screen between the HUD and the animation; save and restore what's stored, including the stock animation |
 | ⌨️ **Everything from Vial** | Keymap and knobs on all layers, macros, tap dance, combos, key overrides, QMK settings, matrix tester |
 | 🧭 **Status** | Link and lock state in the top bar, qmk-armed version, Vial protocol, layer count and keyboard UID in the footer |
 
 | Keymap | Device |
 |---|---|
 | ![Keymap](docs/screenshots/keymap.png) | ![Device](docs/screenshots/device.png) |
+
+| Screen |
+|---|
+| ![Screen](docs/screenshots/screen.png) |
 
 The original mockups are in [`design/`](design/).
 
@@ -61,14 +67,16 @@ that Vial Armed probes on connect:
 | `LIST` | effects (QMK id, flags, name), colour presets, light bar modes, sleep options, LEDs (matrix position, x/y, flags) |
 | `GET` / `SET` | lighting on/off, effect, hue, saturation, brightness, speed, COLOR 2, FN COLOR, light bar mode / colour / Caps alert, auto-sleep |
 | `SAVE` | write hue / saturation / brightness / speed to EEPROM (sliders apply them live without wearing the flash) |
+| `SCREEN_*` | screen size and what's stored; upload an animation as a compressed stream (pipelined, ~26 KiB/s over Vial's 32-byte reports); read it back |
 
 The feature flags decide what's shown: RGB Matrix opens the Lighting page and replaces the VialRGB one,
-COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page. Effect names, colours
+COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page, a screen opens the Screen page. Effect names, colours
 and the LED layout come from the keyboard too, so the GUI hardcodes nothing about a particular board.
 Without qmk-armed, Vial Armed falls back to the stock Vial lighting page.
 
 Protocol spec and how to add features to a keyboard: [qmk-armed/docs/armed.md](https://github.com/backflipinc/qmk-armed/blob/armed/docs/armed.md).
-Implementation here: [`protocol/qmk_armed.py`](src/main/python/protocol/qmk_armed.py).
+Implementation here: [`protocol/qmk_armed.py`](src/main/python/protocol/qmk_armed.py), the animation encoder in
+[`screen_media.py`](src/main/python/screen_media.py).
 
 ## Development
 

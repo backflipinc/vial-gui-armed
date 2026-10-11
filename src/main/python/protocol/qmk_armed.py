@@ -6,18 +6,20 @@ import struct
 CMD_ARMED = 0xAD
 ARMED_PROTOCOL = 1
 
-SUB_INFO, SUB_LIST, SUB_GET, SUB_SET, SUB_SAVE = range(5)
+SUB_INFO, SUB_LIST, SUB_GET, SUB_SET, SUB_SAVE, \
+    SUB_SCREEN_INFO, SUB_SCREEN_BEGIN, SUB_SCREEN_DATA, SUB_SCREEN_END, SUB_SCREEN_READ = range(10)
 L_EFFECTS, L_COLORS, L_STRIP_MODES, L_SLEEP, L_LEDS = range(5)
 L_COUNT = 5
 
 V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, V_SLEEP, \
-    V_HUE, V_SAT, V_VAL, V_SPEED = range(12)
+    V_HUE, V_SAT, V_VAL, V_SPEED, V_SCREEN = range(13)
 
 F_RGB_MATRIX = 1 << 0
 F_COLOR2 = 1 << 1
 F_FN_COLOR = 1 << 2
 F_STRIP = 1 << 3
 F_SLEEP = 1 << 4
+F_SCREEN = 1 << 5
 
 FEATURE_VALUES = {
     F_RGB_MATRIX: (V_ENABLED, V_EFFECT, V_HUE, V_SAT, V_VAL, V_SPEED),
@@ -25,11 +27,32 @@ FEATURE_VALUES = {
     F_FN_COLOR: (V_FN_COLOR,),
     F_STRIP: (V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS),
     F_SLEEP: (V_SLEEP,),
+    F_SCREEN: (V_SCREEN,),
 }
 
 EFFECT_COLOR2 = 0x01
 
 UNHANDLED = 0xFF
+
+MSG_LEN = 32
+SCREEN_DATA_PAYLOAD = MSG_LEN - 4
+SCREEN_READ_PAYLOAD = MSG_LEN - 7
+SCREEN_WINDOW = 8  # requests in flight during an upload / read
+
+
+class ArmedError(Exception):
+    pass
+
+
+class ScreenInfo:
+
+    def __init__(self, data):
+        self.width, self.height, self.format, self.max_frames, self.frames, self.capacity, self.header = \
+            struct.unpack_from("<HHBBBIH", data, 2)
+
+    @property
+    def frame_bytes(self):
+        return self.width * self.height * 2
 
 
 def _cstr(data):
@@ -156,3 +179,77 @@ class QmkArmed:
     def save(self):
         """ Persists HSV and speed, which are applied without EEPROM writes """
         self._send(SUB_SAVE)
+
+    # ---- screen animation (F_SCREEN), see docs/armed.md in qmk-armed
+
+    def screen_info(self):
+        data = self._send(SUB_SCREEN_INFO)
+        return None if data[0] == UNHANDLED else ScreenInfo(data)
+
+    def _write(self, msg):
+        self.keyboard.dev.write(b"\x00" + msg.ljust(MSG_LEN, b"\x00"))
+
+    def _read(self, timeout_ms):
+        data = bytes(self.keyboard.dev.read(MSG_LEN, timeout_ms=timeout_ms))
+        if not data:
+            raise ArmedError("the keyboard did not answer")
+        return data
+
+    def _pipeline(self, requests, on_reply, cancelled, timeout_ms):
+        """ Sends requests with up to SCREEN_WINDOW in flight; replies come back in order """
+        sent = 0
+        pending = 0
+        try:
+            for i in range(len(requests)):
+                while sent < len(requests) and pending < SCREEN_WINDOW:
+                    self._write(requests[sent])
+                    sent += 1
+                    pending += 1
+                reply = self._read(timeout_ms)
+                pending -= 1
+                on_reply(i, reply)
+                if cancelled():
+                    raise ArmedError("cancelled")
+        except BaseException:
+            for _ in range(pending):  # leave nothing in flight for the next command
+                try:
+                    self._read(2000)
+                except Exception:
+                    break
+            raise
+
+    def screen_read(self, offset, size, progress=lambda done, total: None, cancelled=lambda: False):
+        reqs = [(o, min(SCREEN_READ_PAYLOAD, offset + size - o)) for o in range(offset, offset + size, SCREEN_READ_PAYLOAD)]
+        out = bytearray()
+
+        def reply(i, data):
+            o, n = reqs[i]
+            if data[0] != CMD_ARMED or data[1] != SUB_SCREEN_READ or struct.unpack_from("<I", data, 2)[0] != o:
+                raise ArmedError("read failed at byte {}".format(o))
+            out.extend(data[7:7 + n])
+            progress(len(out), size)
+
+        self._pipeline([struct.pack("<BBIB", CMD_ARMED, SUB_SCREEN_READ, o, n) for o, n in reqs], reply, cancelled, 5000)
+        return bytes(out)
+
+    def screen_upload(self, size, stream, progress=lambda done, total: None, cancelled=lambda: False):
+        """ size: bytes the keyboard stores; stream: the encoded animation (screen_media.encode) """
+        data = self._send(SUB_SCREEN_BEGIN, *struct.pack("<I", size))
+        if data[0] == UNHANDLED:
+            raise ArmedError("the keyboard refused the upload")
+        chunks = [stream[i:i + SCREEN_DATA_PAYLOAD] for i in range(0, len(stream), SCREEN_DATA_PAYLOAD)]
+
+        def reply(i, data):
+            if data[1] != SUB_SCREEN_DATA or data[2] != i & 0xFF or data[3] != 0:
+                raise ArmedError("upload failed at byte {}".format(struct.unpack_from("<I", data, 4)[0]))
+            progress(struct.unpack_from("<I", data, 4)[0], size)
+
+        try:
+            # a 64 KiB flash erase can hold a reply for a second or two
+            self._pipeline([struct.pack("<BBBB", CMD_ARMED, SUB_SCREEN_DATA, i & 0xFF, len(c)) + c
+                            for i, c in enumerate(chunks)], reply, cancelled, 10000)
+        except BaseException:
+            self._send(SUB_SCREEN_END, 0)
+            raise
+        if self._send(SUB_SCREEN_END, 1)[0] == UNHANDLED:
+            raise ArmedError("the keyboard rejected the finished upload")

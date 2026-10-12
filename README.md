@@ -21,6 +21,7 @@ own picture, GIF or video on the keyboard's screen.
 |---|---|
 | 🖤 **Armed theme** | Black panels, amber accent, Rajdhani and Share Tech Mono, square keycaps, numbered side menu — the design code of the keyboard's screen. The stock Vial themes are still under **Theme** |
 | 🌈 **Lighting** | Every effect the firmware has, including custom ones — on the IO Type 84 Pro, 7 **two-colour** effects (TWO TONE, GRADIENT 2, CROSSFADE 2, SCANNER 2, STARLIGHT 2, REACTIVE 2, RIPPLE 2); COLOR and COLOR 2, brightness, speed |
+| 🎨 **Themes** | Build your own lighting from up to 8 layers — solid, gradient, rainbow, pulse, wave, sparkle, reactive, ripple and per-key paint. Click or drag over keys to choose where a layer shows, or pick a group (letters, F-row, mods, arrows, WASD). Set the direction on a dial or spread from a key, blend layers, show one only with Caps Lock or Fn. Every change is live on the keyboard; undo / redo, presets, import / export as JSON |
 | 👁️ **Live preview** | The selected effect runs on the keyboard layout with the firmware's own maths, LED positions and flags. Reactive effects press keys by themselves; click a key to press it |
 | 🔦 **Fn overlay** | Pick the FN COLOR and hold **HOLD FN** to see which keys light up while Fn is held |
 | 📏 **Light bar** | Mode (WPM, WPM bar, battery, link, scanner, off), colour and Caps Lock alert, with a 9-LED preview |
@@ -33,9 +34,9 @@ own picture, GIF or video on the keyboard's screen.
 |---|---|
 | ![Keymap](docs/screenshots/keymap.png) | ![Device](docs/screenshots/device.png) |
 
-| Screen |
-|---|
-| ![Screen](docs/screenshots/screen.png) |
+| Themes | Screen |
+|---|---|
+| ![Themes](docs/screenshots/themes.png) | ![Screen](docs/screenshots/screen.png) |
 
 The original mockups are in [`design/`](design/).
 
@@ -68,15 +69,17 @@ that Vial Armed probes on connect:
 | `GET` / `SET` | lighting on/off, effect, hue, saturation, brightness, speed, COLOR 2, FN COLOR, light bar mode / colour / Caps alert, auto-sleep |
 | `SAVE` | write hue / saturation / brightness / speed to EEPROM (sliders apply them live without wearing the flash) |
 | `SCREEN_*` | screen size and what's stored; upload an animation as a compressed stream (pipelined, ~26 KiB/s over Vial's 32-byte reports); read it back |
+| `THEME_*` | theme slots and their layout; read, write live, save, revert |
 
 The feature flags decide what's shown: RGB Matrix opens the Lighting page and replaces the VialRGB one,
-COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page, a screen opens the Screen page. Effect names, colours
+COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page, a screen opens the Screen page, theme slots open the Themes page. Effect names, colours
 and the LED layout come from the keyboard too, so the GUI hardcodes nothing about a particular board.
 Without qmk-armed, Vial Armed falls back to the stock Vial lighting page.
 
 Protocol spec and how to add features to a keyboard: [qmk-armed/docs/armed.md](https://github.com/backflipinc/qmk-armed/blob/armed/docs/armed.md).
 Implementation here: [`protocol/qmk_armed.py`](src/main/python/protocol/qmk_armed.py), the animation encoder in
-[`screen_media.py`](src/main/python/screen_media.py).
+[`screen_media.py`](src/main/python/screen_media.py), themes in [`lighting_theme.py`](src/main/python/lighting_theme.py)
+and the firmware's theme renderer ported to Python in [`theme_render.py`](src/main/python/theme_render.py).
 
 ## Development
 

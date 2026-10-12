@@ -141,7 +141,13 @@ class Segmented(QWidget):
         self.set_labels(labels)
 
     def set_labels(self, labels):
+        buttons = self.group.buttons()
+        if len(buttons) == len(labels):
+            for b, text in zip(buttons, labels):
+                b.setText(text)
+            return
         for b in self.group.buttons():
+            self.lay.removeWidget(b)
             self.group.removeButton(b)
             b.deleteLater()
         for i, text in enumerate(labels):

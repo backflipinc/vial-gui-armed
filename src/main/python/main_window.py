@@ -29,6 +29,7 @@ from editor.rgb_configurator import RGBConfigurator
 from editor.armed_lighting import ArmedLighting
 from editor.armed_device import ArmedDevice
 from editor.armed_screen import ArmedScreen
+from editor.armed_themes import ArmedThemes
 from tabbed_keycodes import TabbedKeycodes
 from editor.tap_dance import TapDance
 from unlocker import Unlocker
@@ -95,9 +96,11 @@ class MainWindow(QMainWindow):
         self.armed_lighting = ArmedLighting(self.layout_editor)
         self.armed_device = ArmedDevice()
         self.armed_screen = ArmedScreen()
+        self.armed_themes = ArmedThemes(self.layout_editor)
 
         self.editors = [(self.keymap_editor, "Keymap"), (self.layout_editor, "Layout"), (self.macro_recorder, "Macros"),
-                        (self.rgb_configurator, "Lighting"), (self.armed_lighting, "Lighting"), (self.armed_screen, "Screen"),
+                        (self.rgb_configurator, "Lighting"), (self.armed_lighting, "Lighting"),
+                        (self.armed_themes, "Themes"), (self.armed_screen, "Screen"),
                         (self.tap_dance, "Tap Dance"), (self.combos, "Combos"),
                         (self.key_override, "Key Overrides"), (self.alt_repeat_key, "Alt Repeat Key"),
                         (self.qmk_settings, "QMK Settings"), (self.matrix_tester, "Matrix tester"),
@@ -468,7 +471,7 @@ class MainWindow(QMainWindow):
         for e in [self.layout_editor, self.keymap_editor, self.firmware_flasher, self.macro_recorder,
                   self.tap_dance, self.combos, self.key_override, self.alt_repeat_key,
                   self.qmk_settings, self.matrix_tester, self.rgb_configurator, self.armed_lighting,
-                  self.armed_device, self.armed_screen]:
+                  self.armed_device, self.armed_screen, self.armed_themes]:
             e.rebuild(self.autorefresh.current_device)
         self.update_armed_status()
 

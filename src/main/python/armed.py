@@ -109,6 +109,7 @@ QPushButton:disabled, QToolButton:disabled {{ color: {DIM}; border-color: {LINE}
 QPushButton:default {{ border-color: {ACC}; color: {ACC}; }}
 SquareButton {{ padding: 0; }}
 QPushButton:checked:disabled {{ background: {ACC_BG}; border-color: {ACC}; color: {ACC}; }}
+QPushButton::menu-indicator {{ image: none; width: 0; }}
 
 QComboBox {{ background: {PANEL}; border: 1px solid {LINE2}; padding: 4px 28px 4px 10px; color: {TXT}; border-radius: 0; }}
 QComboBox:hover {{ border-color: {ACC}; }}

@@ -11,8 +11,10 @@ from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QSlid
 import armed
 from editor.basic_editor import BasicEditor
 from effects_preview import EffectPreview, StripPreview, effect_key
+from theme_render import ThemeRenderer
+from lighting_theme import REACTIVE, RIPPLE
 from protocol.qmk_armed import V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, \
-    V_HUE, V_SAT, V_VAL, V_SPEED, F_RGB_MATRIX, F_COLOR2, F_FN_COLOR, F_STRIP
+    V_HUE, V_SAT, V_VAL, V_SPEED, F_RGB_MATRIX, F_COLOR2, F_FN_COLOR, F_STRIP, F_THEMES
 from vial_device import VialKeyboard
 from widgets.armed_controls import BracketFrame, Swatches, Segmented, StripView
 from widgets.keyboard_widget import KeyboardWidget
@@ -114,6 +116,8 @@ class ArmedLighting(BasicEditor):
         self.last_demo = 0
 
         self.preview = None
+        self.theme_preview = None
+        self.theme_slot = None
         self.strip_preview = StripPreview()
 
         top = QHBoxLayout()
@@ -267,6 +271,7 @@ class ArmedLighting(BasicEditor):
         kb = device.keyboard
         self.leds = self.io.leds
         self.preview = EffectPreview(self.leds)
+        self.theme_preview = ThemeRenderer(self.leds)
         self.kb.set_keys(kb.keys, kb.encoders)
         self.fit_preview()
         by_pos = {(w.desc.row, w.desc.col): w for w in self.kb.widgets}
@@ -293,6 +298,7 @@ class ArmedLighting(BasicEditor):
             item = QListWidgetItem(e.name)
             item.setData(Qt.UserRole, e.qmk_id)
             item.setData(Qt.UserRole + 1, e.uses_color2)
+            item.setData(Qt.UserRole + 2, e.name if e.theme else None)
             self.effects.addItem(item)
         for sw in (self.color2, self.fn_color, self.strip_color):
             sw.set_colors(self.io.colors)
@@ -364,6 +370,12 @@ class ArmedLighting(BasicEditor):
         self.fn_name.setText(self.color_name(io.get(V_FN_COLOR)))
         self.btn_enabled.setText("ON" if io.get(V_ENABLED) else "OFF")
 
+        modes = getattr(io, "theme_modes", [])
+        mode = item.data(Qt.UserRole) if item else None
+        self.theme_slot = modes.index(mode) if io.themes and mode in modes else None
+        self.color_frame.setVisible(self.theme_slot is None)
+        self.color2_frame.setVisible(io.has(F_COLOR2) and self.theme_slot is None)
+
         uses2 = bool(item and item.data(Qt.UserRole + 1))
         self.color2_frame.set_accent(uses2)
         self.color2_name.setStyleSheet("color: {};".format(armed.TXT if uses2 else armed.DIM))
@@ -406,7 +418,24 @@ class ArmedLighting(BasicEditor):
         for i, w in enumerate(self.led_keys):
             if w is key:
                 self.preview.hit(i, self.now())
+                self.theme_preview.hit(i, self.now())
                 return
+
+    def load_themes(self):
+        if not self.io.has(F_THEMES):
+            return
+        try:
+            if self.io.themes is None:
+                self.io.load_themes()
+        except Exception:
+            return
+        modes = self.io.theme_modes
+        for row in range(self.effects.count()):
+            item = self.effects.item(row)
+            base = item.data(Qt.UserRole + 2)
+            if base is not None and item.data(Qt.UserRole) in modes:
+                theme = self.io.themes[modes.index(item.data(Qt.UserRole))]
+                item.setText("{} \u00b7 {}".format(base, theme.name) if theme.name else base)
 
     # animation
 
@@ -416,6 +445,7 @@ class ArmedLighting(BasicEditor):
     def activate(self):
         if self.io is not None:
             self.io.reload_values()
+            self.load_themes()
             self.load_values()
             self.timer.start(1000 // FPS)
 
@@ -427,12 +457,21 @@ class ArmedLighting(BasicEditor):
             return
         t = self.now()
         p = self.preview
-        if p.reactive and t - self.last_demo > DEMO_PRESS_MS:
+        theme = self.io.themes[self.theme_slot] if self.theme_slot is not None else None
+        reactive = any(l.type in (REACTIVE, RIPPLE) for l in theme.layers) if theme else p.reactive
+        if reactive and t - self.last_demo > DEMO_PRESS_MS:
             self.last_demo = t
-            p.hit(random.randrange(len(self.leds)), t)
+            i = random.randrange(len(self.leds))
+            p.hit(i, t)
+            self.theme_preview.hit(i, t)
 
         enabled = self.io.get(V_ENABLED)
-        colors = p.frame(t) if enabled else [(0, 0, 0)] * len(self.leds)
+        if not enabled:
+            colors = [(0, 0, 0)] * len(self.leds)
+        elif theme is not None:
+            colors = self.theme_preview.frame(theme, t, p.v)
+        else:
+            colors = p.frame(t)
         if self.fn_preview:
             fc = self.io.colors[self.io.get(V_FN_COLOR)] if self.io.get(V_FN_COLOR) < len(self.io.colors) else None
             on = (0, 0, 0)

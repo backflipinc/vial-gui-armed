@@ -7,7 +7,8 @@ CMD_ARMED = 0xAD
 ARMED_PROTOCOL = 1
 
 SUB_INFO, SUB_LIST, SUB_GET, SUB_SET, SUB_SAVE, \
-    SUB_SCREEN_INFO, SUB_SCREEN_BEGIN, SUB_SCREEN_DATA, SUB_SCREEN_END, SUB_SCREEN_READ = range(10)
+    SUB_SCREEN_INFO, SUB_SCREEN_BEGIN, SUB_SCREEN_DATA, SUB_SCREEN_END, SUB_SCREEN_READ, \
+    SUB_THEME_INFO, SUB_THEME_READ, SUB_THEME_WRITE, SUB_THEME_SAVE, SUB_THEME_REVERT = range(15)
 L_EFFECTS, L_COLORS, L_STRIP_MODES, L_SLEEP, L_LEDS = range(5)
 L_COUNT = 5
 
@@ -20,6 +21,7 @@ F_FN_COLOR = 1 << 2
 F_STRIP = 1 << 3
 F_SLEEP = 1 << 4
 F_SCREEN = 1 << 5
+F_THEMES = 1 << 6
 
 FEATURE_VALUES = {
     F_RGB_MATRIX: (V_ENABLED, V_EFFECT, V_HUE, V_SAT, V_VAL, V_SPEED),
@@ -31,6 +33,7 @@ FEATURE_VALUES = {
 }
 
 EFFECT_COLOR2 = 0x01
+EFFECT_THEME = 0x02
 
 UNHANDLED = 0xFF
 
@@ -38,6 +41,7 @@ MSG_LEN = 32
 SCREEN_DATA_PAYLOAD = MSG_LEN - 4
 SCREEN_READ_PAYLOAD = MSG_LEN - 7
 SCREEN_WINDOW = 8  # requests in flight during an upload / read
+THEME_PAYLOAD = MSG_LEN - 6
 
 
 class ArmedError(Exception):
@@ -55,6 +59,13 @@ class ScreenInfo:
         return self.width * self.height * 2
 
 
+class ThemeInfo:
+
+    def __init__(self, data):
+        self.slots, self.layers, self.leds, self.size, self.format = struct.unpack_from("<BBBHB", data, 2)
+        self.modes = list(data[8:8 + self.slots])
+
+
 def _cstr(data):
     return bytes(data).split(b"\x00")[0].decode("ascii", "replace")
 
@@ -69,6 +80,10 @@ class ArmedEffect:
     @property
     def uses_color2(self):
         return bool(self.flags & EFFECT_COLOR2)
+
+    @property
+    def theme(self):
+        return bool(self.flags & EFFECT_THEME)
 
 
 class ArmedColor:
@@ -111,6 +126,7 @@ class QmkArmed:
         self.leds = []
         self.max_brightness = 255
         self.values = dict()
+        self.themes = None  # Theme per slot once read, shared by the Lighting and Themes pages
 
     def _send(self, *payload):
         msg = struct.pack("B" * (len(payload) + 1), CMD_ARMED, *payload)
@@ -253,3 +269,42 @@ class QmkArmed:
             raise
         if self._send(SUB_SCREEN_END, 1)[0] == UNHANDLED:
             raise ArmedError("the keyboard rejected the finished upload")
+
+    # ---- lighting themes (F_THEMES), see docs/armed.md in qmk-armed
+
+    def theme_info(self):
+        data = self._send(SUB_THEME_INFO)
+        return None if data[0] == UNHANDLED else ThemeInfo(data)
+
+    def load_themes(self):
+        from lighting_theme import Theme
+        info = self.theme_info()
+        if info is None:
+            return None
+        self.themes = [Theme.unpack(self.theme_read(s, info.size), info.leds, info.layers) for s in range(info.slots)]
+        self.theme_modes = info.modes
+        return info
+
+    def theme_read(self, slot, size):
+        out = bytearray()
+        for off in range(0, size, THEME_PAYLOAD):
+            n = min(THEME_PAYLOAD, size - off)
+            data = self._send(SUB_THEME_READ, slot, off & 0xFF, off >> 8, n)
+            if data[0] == UNHANDLED:
+                raise ArmedError("theme read failed at byte {}".format(off))
+            out.extend(data[6:6 + n])
+        return bytes(out)
+
+    def theme_write(self, slot, off, payload):
+        for i in range(0, len(payload), THEME_PAYLOAD):
+            chunk = payload[i:i + THEME_PAYLOAD]
+            o = off + i
+            if self._send(SUB_THEME_WRITE, slot, o & 0xFF, o >> 8, len(chunk), *chunk)[0] == UNHANDLED:
+                raise ArmedError("theme write failed at byte {}".format(o))
+
+    def theme_save(self, slot):
+        if self._send(SUB_THEME_SAVE, slot)[0] == UNHANDLED:
+            raise ArmedError("the keyboard could not store the theme")
+
+    def theme_revert(self, slot):
+        self._send(SUB_THEME_REVERT, slot)

@@ -828,6 +828,7 @@ class ArmedThemes(BasicEditor):
         self.push()
         try:
             self.io.theme_save(self.slot)
+            self.apply_to_keyboard()
         except Exception as e:
             QMessageBox.warning(self.parentWidget(), "", tr("ArmedThemes", "Could not save the theme: {}").format(e))
             return

@@ -233,6 +233,9 @@ class ArmedThemes(BasicEditor):
         for g in GROUPS + ["NONE", "INVERT"]:
             b = QPushButton(g)
             b.clicked.connect(lambda _, g=g: self.on_group(g))
+            if g == "FN LAYER":
+                b.setToolTip(tr("ArmedThemes", "Keys bound on the Fn layer and the Fn key itself; "
+                                               "pair it with SHOW: FN HELD"))
             tools.addWidget(b)
             self.group_buttons.append(b)
         tools.addStretch(1)
@@ -1042,6 +1045,7 @@ class ArmedThemes(BasicEditor):
             return
         if not self.loaded:
             self.load()
+        self.groups = key_groups(self.leds, self.device.keyboard.layout)
         self.timer.start(1000 // FPS)
         self.set_shortcuts(True)
 

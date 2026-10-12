@@ -12,7 +12,7 @@ import armed
 from editor.basic_editor import BasicEditor
 from effects_preview import EffectPreview, StripPreview, effect_key
 from theme_render import ThemeRenderer
-from lighting_theme import REACTIVE, RIPPLE
+from lighting_theme import REACTIVE, RIPPLE, C_LAYER, C_NOT_LAYER
 from protocol.qmk_armed import V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, \
     V_HUE, V_SAT, V_VAL, V_SPEED, F_RGB_MATRIX, F_COLOR2, F_FN_COLOR, F_STRIP, F_THEMES
 from vial_device import VialKeyboard
@@ -469,10 +469,12 @@ class ArmedLighting(BasicEditor):
         if not enabled:
             colors = [(0, 0, 0)] * len(self.leds)
         elif theme is not None:
+            self.theme_preview.layer_on = {1} if self.fn_preview else set()
             colors = self.theme_preview.frame(theme, t, p.v)
         else:
             colors = p.frame(t)
-        if self.fn_preview:
+        theme_fn = theme is not None and any(l.type and not l.hidden and l.cond & (C_LAYER | C_NOT_LAYER) for l in theme.layers)
+        if self.fn_preview and not theme_fn:
             fc = self.io.colors[self.io.get(V_FN_COLOR)] if self.io.get(V_FN_COLOR) < len(self.io.colors) else None
             on = (0, 0, 0)
             if fc is not None and not fc.black:

@@ -209,7 +209,7 @@ FKEYS = {"KC_F{}".format(i) for i in range(1, 25)} | {"KC_ESCAPE", "KC_ESC"}
 ARROWS = {"KC_UP", "KC_DOWN", "KC_LEFT", "KC_RIGHT", "KC_RGHT"}
 WASD = {"KC_W", "KC_A", "KC_S", "KC_D"}
 
-GROUPS = ["ALL", "LETTERS", "NUMBERS", "F-ROW", "MODS", "ARROWS", "WASD"]
+GROUPS = ["ALL", "LETTERS", "NUMBERS", "F-ROW", "MODS", "ARROWS", "WASD", "FN LAYER"]
 
 
 def key_groups(leds, layout):
@@ -224,7 +224,16 @@ def key_groups(leds, layout):
         "MODS": {i for i, led in enumerate(leds) if led.modifier},
         "ARROWS": by_code(ARROWS),
         "WASD": by_code(WASD),
+        "FN LAYER": fn_layer_keys(leds, layout),
     }
+
+
+def fn_layer_keys(leds, layout, layer=1):
+    """ Keys bound on the Fn layer, plus the key that holds it """
+    hold = "MO({})".format(layer)
+    return {i for i, led in enumerate(leds)
+            if layout.get((layer, led.row, led.col)) not in (None, "KC_TRNS", "KC_NO")
+            or layout.get((0, led.row, led.col)) == hold}
 
 
 def _layer(ltype, keys="ALL", **kw):
@@ -248,6 +257,9 @@ PRESETS = [
                _layer(WAVE, a=(0, 255, 60), speed=40, size=50, flags=F_RADIAL)], {}),
     ("CAPS ALERT", [_layer(GRADIENT, a=(0, 120, 255), b=(150, 0, 255), speed=14, flags=F_MIRROR),
                     _layer(PULSE, a=(255, 0, 0), b=(60, 0, 0), speed=90, cond=C_CAPS)], {}),
+    ("FN MAP", [_layer(GRADIENT, a=(0, 120, 255), b=(0, 255, 160), speed=12, flags=F_MIRROR),
+                _layer(SOLID, a=(0, 0, 0), opacity=220, cond=C_LAYER | 1),
+                _layer(PULSE, "FN LAYER", a=(255, 170, 0), b=(255, 255, 255), speed=60, cond=C_LAYER | 1)], {}),
     ("BLANK", [], {}),
 ]
 

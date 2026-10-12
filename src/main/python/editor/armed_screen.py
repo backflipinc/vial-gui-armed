@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Screen page for qmk-armed keyboards with a display: your own picture, GIF or video instead of the HUD
+import logging
 import os
+from datetime import datetime
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
@@ -10,12 +12,14 @@ from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QPush
 import screen_media
 from editor.basic_editor import BasicEditor
 from unlocker import Unlocker
-from protocol.qmk_armed import V_SCREEN, F_SCREEN, ArmedError
+from protocol.qmk_armed import V_SCREEN, V_CLOCK, F_SCREEN, F_CLOCK, ArmedError
 from vial_device import VialKeyboard
 from widgets.armed_controls import BracketFrame, Segmented
 from util import tr
 
 SCREEN_MODES = ("HUD", "ANIMATION")
+CLOCK_FORMATS = ("24H", "12H", "OFF")
+CLOCK_SYNC_MS = 10 * 60 * 1000
 FITS = ("CONTAIN", "COVER", "STRETCH")
 FPS_CHOICES = (5, 10, 15, 20, 25)
 UPLOAD_RATE = 26 * 1024  # bytes of stream per second over Vial's raw HID, measured
@@ -87,6 +91,29 @@ class ArmedScreen(BasicEditor):
         note.setObjectName("armedHint")
         note.setWordWrap(True)
         main.box.addWidget(note)
+
+        # CLOCK
+        self.clock = BracketFrame("CLOCK")
+        row = QHBoxLayout()
+        self.clock_fmt = Segmented(CLOCK_FORMATS)
+        self.clock_fmt.changed.connect(self.on_clock_format)
+        row.addWidget(self.clock_fmt)
+        row.addStretch(1)
+        self.btn_sync = QPushButton(tr("ArmedScreen", "SYNC NOW"))
+        self.btn_sync.clicked.connect(self.sync_clock)
+        row.addWidget(self.btn_sync)
+        self.clock.box.addLayout(row)
+        self.lbl_clock = QLabel()
+        self.clock.box.addWidget(self.lbl_clock)
+        note = QLabel(tr("ArmedScreen", "Shown on the HUD under WPM and battery. The keyboard's own clock chip keeps time "
+                                        "through sleep and unplugging; Vial Armed sets it from this computer when it connects. "
+                                        "Also in its menu: DISPLAY > CLOCK."))
+        note.setObjectName("armedHint")
+        note.setWordWrap(True)
+        self.clock.box.addWidget(note)
+        self.clock_timer = QTimer()
+        self.clock_timer.setInterval(CLOCK_SYNC_MS)
+        self.clock_timer.timeout.connect(self.sync_clock)
 
         # ON THE KEYBOARD
         stored = BracketFrame("ON THE KEYBOARD")
@@ -194,7 +221,8 @@ class ArmedScreen(BasicEditor):
         grid.setSpacing(18)
         grid.addWidget(main, 0, 0)
         grid.addWidget(stored, 0, 1)
-        grid.addWidget(new, 1, 0, 1, 2)
+        grid.addWidget(self.clock, 1, 0, 1, 2)
+        grid.addWidget(new, 2, 0, 1, 2)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
         self.addLayout(grid)
@@ -212,8 +240,13 @@ class ArmedScreen(BasicEditor):
     def rebuild(self, device):
         super().rebuild(device)
         self.io = device.keyboard.armed if self.valid() else None
+        self.clock_timer.stop()
         if self.io is None:
             return
+        self.clock.setVisible(self.io.has(F_CLOCK))
+        if self.io.has(F_CLOCK):
+            self.sync_clock()
+            self.clock_timer.start()
         self.info = self.io.screen_info()
         w, h = (self.info.width, self.info.height) if self.info else (320, 172)
         self.preview.setFixedSize(w + 2, h + 2)
@@ -231,6 +264,7 @@ class ArmedScreen(BasicEditor):
 
     def load(self):
         self.mode.set_current(self.io.get(V_SCREEN))
+        self.clock_fmt.set_current(self.io.get(V_CLOCK))
         if self.info is None:
             self.lbl_stored.setText("—")
         elif self.info.frames:
@@ -241,6 +275,29 @@ class ArmedScreen(BasicEditor):
 
     def on_mode(self, idx):
         self.io.set(V_SCREEN, idx)
+
+    def on_clock_format(self, idx):
+        self.io.set(V_CLOCK, idx)
+
+    def sync_clock(self):
+        """ The keyboard counts whole seconds: send the time right after a second ticks over """
+        QTimer.singleShot(1000 - datetime.now().microsecond // 1000, self.send_clock)
+
+    def send_clock(self):
+        if self.io is None or not self.io.has(F_CLOCK) or self.job is not None:
+            return
+        try:
+            kb = self.io.clock_get()
+            now = datetime.now()
+            self.io.clock_set(now)
+        except Exception as e:
+            logging.warning("clock sync failed: %s", e)
+            self.lbl_clock.setText(tr("ArmedScreen", "NOT SYNCED"))
+            return
+        text = tr("ArmedScreen", "SYNCED {}").format(now.strftime("%H:%M:%S"))
+        if kb is not None:
+            text += tr("ArmedScreen", "  ·  WAS {:+.0f} S OFF").format((kb - now.replace(microsecond=0)).total_seconds())
+        self.lbl_clock.setText(text)
 
     # ---- new animation
 
@@ -416,5 +473,7 @@ class ArmedScreen(BasicEditor):
         self.btn_backup.setEnabled(idle and bool(self.info and self.info.frames))
         self.btn_restore.setEnabled(idle and self.info is not None)
         self.mode.setEnabled(idle)
+        self.clock_fmt.setEnabled(idle)
+        self.btn_sync.setEnabled(idle)
         for seg in (self.fit, self.fps, self.slide):
             seg.setEnabled(idle)

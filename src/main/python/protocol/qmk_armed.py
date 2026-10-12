@@ -2,18 +2,20 @@
 # qmk-armed protocol (command 0xAD): settings VIA / Vial don't cover, reported per keyboard
 import logging
 import struct
+from datetime import datetime, timedelta
 
 CMD_ARMED = 0xAD
 ARMED_PROTOCOL = 1
 
 SUB_INFO, SUB_LIST, SUB_GET, SUB_SET, SUB_SAVE, \
     SUB_SCREEN_INFO, SUB_SCREEN_BEGIN, SUB_SCREEN_DATA, SUB_SCREEN_END, SUB_SCREEN_READ, \
-    SUB_THEME_INFO, SUB_THEME_READ, SUB_THEME_WRITE, SUB_THEME_SAVE, SUB_THEME_REVERT = range(15)
+    SUB_THEME_INFO, SUB_THEME_READ, SUB_THEME_WRITE, SUB_THEME_SAVE, SUB_THEME_REVERT, \
+    SUB_CLOCK_GET, SUB_CLOCK_SET = range(17)
 L_EFFECTS, L_COLORS, L_STRIP_MODES, L_SLEEP, L_LEDS = range(5)
 L_COUNT = 5
 
 V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, V_SLEEP, \
-    V_HUE, V_SAT, V_VAL, V_SPEED, V_SCREEN = range(13)
+    V_HUE, V_SAT, V_VAL, V_SPEED, V_SCREEN, V_CLOCK = range(14)
 
 F_RGB_MATRIX = 1 << 0
 F_COLOR2 = 1 << 1
@@ -22,6 +24,7 @@ F_STRIP = 1 << 3
 F_SLEEP = 1 << 4
 F_SCREEN = 1 << 5
 F_THEMES = 1 << 6
+F_CLOCK = 1 << 7
 
 FEATURE_VALUES = {
     F_RGB_MATRIX: (V_ENABLED, V_EFFECT, V_HUE, V_SAT, V_VAL, V_SPEED),
@@ -30,6 +33,7 @@ FEATURE_VALUES = {
     F_STRIP: (V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS),
     F_SLEEP: (V_SLEEP,),
     F_SCREEN: (V_SCREEN,),
+    F_CLOCK: (V_CLOCK,),
 }
 
 EFFECT_COLOR2 = 0x01
@@ -195,6 +199,20 @@ class QmkArmed:
     def save(self):
         """ Persists HSV and speed, which are applied without EEPROM writes """
         self._send(SUB_SAVE)
+
+    # ---- clock (F_CLOCK): local wall time in whole seconds, the keyboard knows no time zones
+
+    def clock_get(self):
+        """ Keyboard's local time as a naive datetime, None if it was never set """
+        data = self._send(SUB_CLOCK_GET)
+        if data[0] == UNHANDLED or not data[2]:
+            return None
+        return datetime(1970, 1, 1) + timedelta(seconds=struct.unpack_from("<I", data, 3)[0])
+
+    def clock_set(self, when):
+        secs = int(round((when - datetime(1970, 1, 1)).total_seconds()))
+        if self._send(SUB_CLOCK_SET, *struct.pack("<I", secs))[0] == UNHANDLED:
+            raise ArmedError("clock not set")
 
     # ---- screen animation (F_SCREEN), see docs/armed.md in qmk-armed
 

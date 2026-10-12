@@ -560,6 +560,8 @@ class ArmedThemes(BasicEditor):
                 j += 1
             ranges.append((i, j))
             i = j
+        if not ranges:
+            return
         try:
             for a, b in ranges:
                 self.io.theme_write(self.slot, a, new[a:b])
@@ -1040,11 +1042,27 @@ class ArmedThemes(BasicEditor):
     def now(self):
         return int((time.monotonic() - self.t0) * 1000)
 
+    def follow_keyboard(self):
+        """ Open the slot that is lit now, if another page switched to a theme """
+        try:
+            self.io.reload_values()
+        except Exception:
+            return
+        effect = self.io.get(V_EFFECT)
+        if effect in self.info.modes and self.info.modes.index(effect) != self.slot:
+            self.flush_group()
+            self.slot = self.info.modes.index(effect)
+            self.cur = len(self.theme.layers) - 1
+            self.btn_center.setChecked(False)
+            self.refresh_all()
+
     def activate(self):
         if self.io is None:
             return
         if not self.loaded:
             self.load()
+        else:
+            self.follow_keyboard()
         self.groups = key_groups(self.leds, self.device.keyboard.layout)
         self.timer.start(1000 // FPS)
         self.set_shortcuts(True)

@@ -324,7 +324,7 @@ class ArmedLighting(BasicEditor):
     def load_values(self):
         io = self.io
         self.block(True)
-        ids = [e.qmk_id for e in io.effects]
+        ids = [self.effects.item(row).data(Qt.UserRole) for row in range(self.effects.count())]
         effect = io.get(V_EFFECT)
         self.effects.setCurrentRow(ids.index(effect) if effect in ids else -1)
         if self.effects.currentItem():

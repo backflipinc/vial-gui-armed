@@ -244,13 +244,20 @@ class ArmedScreen(BasicEditor):
         grid.setSpacing(18)
         grid.addWidget(main, 0, 0)
         grid.addWidget(self.display, 0, 1)
-        grid.addWidget(self.clock, 1, 0)
-        grid.addWidget(stored, 1, 1)
-        grid.addWidget(new, 2, 0, 1, 2)
+        grid.addWidget(self.clock, 1, 0, 1, 2)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
         self.addLayout(grid)
         self.addStretch(1)
+
+        # the animation lives on its own page, which shares this page's state
+        self.animation = ArmedAnimation(self)
+        grid = QGridLayout()
+        grid.setSpacing(18)
+        grid.addWidget(stored, 0, 0)
+        grid.addWidget(new, 1, 0)
+        self.animation.addLayout(grid)
+        self.animation.addStretch(1)
         self.show_progress(False)
 
     # ---- device
@@ -513,3 +520,20 @@ class ArmedScreen(BasicEditor):
         self.btn_sync.setEnabled(idle)
         for seg in (self.fit, self.fps, self.slide):
             seg.setEnabled(idle)
+
+
+class ArmedAnimation(BasicEditor):
+    """ Screen > ANIMATION: the stored animation and a new upload; the work is done by ArmedScreen """
+
+    def __init__(self, screen):
+        super().__init__()
+        self.screen = screen
+
+    def valid(self):
+        return self.screen.valid()
+
+    def activate(self):
+        self.screen.activate()
+
+    def deactivate(self):
+        self.screen.deactivate()

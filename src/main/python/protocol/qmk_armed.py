@@ -18,10 +18,13 @@ SUB_INFO, SUB_LIST, SUB_GET, SUB_SET, SUB_SAVE, \
     SUB_HUD_INFO, SUB_HUD_SOURCE, SUB_HUD_VALUE, SUB_HUD_FONT, SUB_HUD_PALETTE, SUB_HUD_READ, SUB_HUD_WRITE, \
     SUB_HUD_APPLY, SUB_HUD_REVERT, SUB_HUD_PUSH, SUB_HUD_TEXT = range(29)
 L_EFFECTS, L_COLORS, L_STRIP_MODES, L_SLEEP, L_LEDS = range(5)
-L_COUNT = 5
+L_COUNT = 5  # sized in INFO; the lists below are read until the keyboard answers 0xFF
+L_SNAPTAP_MODES, L_ACCENTS, L_SCREEN_OFF = range(5, 8)
+LIST_MAX = 32
 
 V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, V_SLEEP, \
-    V_HUE, V_SAT, V_VAL, V_SPEED, V_SCREEN, V_CLOCK = range(14)
+    V_HUE, V_SAT, V_VAL, V_SPEED, V_SCREEN, V_CLOCK, V_NKRO, V_GUI_LOCK, V_SNAPTAP, V_ACCENT, V_SCREEN_OFF, \
+    V_BT_SLOT = range(20)
 
 F_RGB_MATRIX = 1 << 0
 F_COLOR2 = 1 << 1
@@ -32,6 +35,10 @@ F_SCREEN = 1 << 5
 F_THEMES = 1 << 6
 F_CLOCK = 1 << 7
 F_HUD = 1 << 8
+F_KEYMAP = 1 << 9
+F_SNAPTAP = 1 << 10
+F_DISPLAY = 1 << 11
+F_BT_SLOT = 1 << 12
 
 FEATURE_VALUES = {
     F_RGB_MATRIX: (V_ENABLED, V_EFFECT, V_HUE, V_SAT, V_VAL, V_SPEED),
@@ -41,6 +48,10 @@ FEATURE_VALUES = {
     F_SLEEP: (V_SLEEP,),
     F_SCREEN: (V_SCREEN,),
     F_CLOCK: (V_CLOCK,),
+    F_KEYMAP: (V_NKRO, V_GUI_LOCK),
+    F_SNAPTAP: (V_SNAPTAP,),
+    F_DISPLAY: (V_ACCENT, V_SCREEN_OFF),
+    F_BT_SLOT: (V_BT_SLOT,),
 }
 
 EFFECT_COLOR2 = 0x01
@@ -156,6 +167,9 @@ class QmkArmed:
         self.strip_modes = []
         self.sleep_minutes = []
         self.leds = []
+        self.snaptap_modes = []
+        self.accents = []  # ArmedColor
+        self.screen_off = []  # (seconds, name)
         self.max_brightness = 255
         self.values = dict()
         self.themes = None  # Theme per slot once read, shared by the Lighting and Themes pages
@@ -233,6 +247,14 @@ class QmkArmed:
         self.strip_modes = [_cstr(d) for d in lst(L_STRIP_MODES)]
         self.sleep_minutes = [d[0] for d in lst(L_SLEEP)]
         self.leds = [ArmedLed(d[0], d[1], d[2], d[3], d[4]) for d in lst(L_LEDS)]
+
+        def open_list(kind, feature):
+            if not self.has(feature):
+                return []
+            return self.cached("list{}".format(kind), lambda: self._list(kind, LIST_MAX))
+        self.snaptap_modes = [_cstr(d) for d in open_list(L_SNAPTAP_MODES, F_SNAPTAP)]
+        self.accents = [ArmedColor(d[0], d[1], _cstr(d[2:])) for d in open_list(L_ACCENTS, F_DISPLAY)]
+        self.screen_off = [(d[0] | d[1] << 8, _cstr(d[2:])) for d in open_list(L_SCREEN_OFF, F_DISPLAY)]
         self.reload_values()
 
     def reload_values(self):

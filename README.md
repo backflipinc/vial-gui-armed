@@ -22,13 +22,13 @@ metrics.
 |---|---|
 | 🖤 **Armed theme** | Black panels, amber accent, Rajdhani and Share Tech Mono, square keycaps, numbered side menu — the design code of the keyboard's screen. The stock Vial themes are still under **Theme** |
 | 🌈 **Lighting** | Every effect the firmware has, including custom ones — on the IO Type 84 Pro, 7 **two-colour** effects (TWO TONE, GRADIENT 2, CROSSFADE 2, SCANNER 2, STARLIGHT 2, REACTIVE 2, RIPPLE 2); COLOR and COLOR 2, brightness, speed |
-| 🎨 **Themes** | Build your own lighting from up to 8 layers — solid, gradient, rainbow, pulse, wave, sparkle, reactive, ripple and per-key paint. Click or drag over keys to choose where a layer shows, or pick a group (letters, F-row, mods, arrows, WASD, the keys bound on Fn). Set the direction on a dial or spread from a key, blend layers, show one only with Caps Lock or Fn. Every change is live on the keyboard; undo / redo, presets, import / export as JSON |
+| 🎨 **Themes** | Under **Lighting**: build your own lighting from up to 8 layers — solid, gradient, rainbow, pulse, wave, sparkle, reactive, ripple and per-key paint. Click or drag over keys to choose where a layer shows, or pick a group (letters, F-row, mods, arrows, WASD, the keys bound on Fn). Set the direction on a dial or spread from a key, blend layers, show one only with Caps Lock or Fn. Every change is live on the keyboard; undo / redo, presets, import / export as JSON |
 | 👁️ **Live preview** | The selected effect runs on the keyboard layout with the firmware's own maths, LED positions and flags. Reactive effects press keys by themselves; click a key to press it |
 | 🔦 **Fn overlay** | Pick the FN COLOR and hold **HOLD FN** to see which keys light up while Fn is held |
 | 📏 **Light bar** | Mode (WPM, WPM bar, battery, link, scanner, off), colour and Caps Lock alert, with a 9-LED preview |
-| 💤 **Device** | Auto-sleep timer, with the options the keyboard offers |
+| ⚙️ **Device** | NKRO, Win lock, SnapTap mode, Bluetooth slot, the screen's accent colour and timeout, auto-sleep — what the keyboard's own menu sets, shown for what the keyboard has |
 | 🎞️ **Screen** | Put a picture, GIF or video (with ffmpeg installed) on the keyboard's screen: fit, frame rate, slideshow, a preview of exactly what gets uploaded, progress with time left. Switch the main screen between the HUD and the animation; save and restore what's stored, including the stock animation. Sets the keyboard's clock from this computer when it connects, 24H / 12H / off |
-| 📟 **HUD** | Lay out the keyboard's main screen from widgets — text with values, bars, graphs, indicators, the battery icon, frames and lines, multi-line text — on a preview drawn pixel for pixel like the keyboard draws it, with its own fonts and colour roles, so the result keeps the look of the firmware. Drag with smart guides, resize, nudge with arrows; select several and align, distribute or match their sizes; reorder in the widget list; copy / paste, undo / redo, presets (keyboard default, system monitor, console, big clock), import / export as JSON. Live on the keyboard as you edit, SAVE keeps it |
+| 📟 **HUD** | Under **Screen**: lay out the keyboard's main screen from widgets — text with values, bars, graphs, indicators, the battery icon, frames and lines, multi-line text — on a preview drawn pixel for pixel like the keyboard draws it, with its own fonts and colour roles, so the result keeps the look of the firmware. Drag with smart guides, resize, nudge with arrows; select several and align, distribute or match their sizes; reorder in the widget list; copy / paste, undo / redo, presets (keyboard default, system monitor, console, big clock), import / export as JSON. Live on the keyboard as you edit, SAVE keeps it |
 | 📡 **HUD agent** | Feeds the HUD with this computer's CPU / GPU load and temperature, RAM, VRAM, swap, network, disk, load average and laptop battery, plus the first number or the whole output of any command or script (Cyrillic is spelled in Latin letters). Runs inside Vial Armed, or without a window: `vial-armed --agent`, with a RUN AT LOGIN switch on Linux. Over USB and the 2.4 GHz dongle |
 | ⌨️ **Everything from Vial** | Keymap and knobs on all layers, macros, tap dance, combos, key overrides, QMK settings, matrix tester |
 | 🧭 **Status** | Link and lock state in the top bar, qmk-armed version, Vial protocol, layer count and keyboard UID in the footer |
@@ -79,7 +79,7 @@ that Vial Armed probes on connect:
 |---|---|
 | `INFO` | `ARMD` magic, protocol and firmware version, **feature flags**, list sizes, maximum brightness |
 | `LIST` | effects (QMK id, flags, name), colour presets, light bar modes, sleep options, LEDs (matrix position, x/y, flags) |
-| `GET` / `SET` | lighting on/off, effect, hue, saturation, brightness, speed, COLOR 2, FN COLOR, light bar mode / colour / Caps alert, auto-sleep, main screen, clock format |
+| `GET` / `SET` | lighting on/off, effect, hue, saturation, brightness, speed, COLOR 2, FN COLOR, light bar mode / colour / Caps alert, auto-sleep, main screen, clock format, NKRO, Win lock, SnapTap mode, screen accent and timeout, Bluetooth slot |
 | `SAVE` | write hue / saturation / brightness / speed to EEPROM (sliders apply them live without wearing the flash) |
 | `SCREEN_*` | screen size and what's stored; upload an animation as a compressed stream (pipelined, ~26 KiB/s over Vial's 32-byte reports); read it back |
 | `THEME_*` | theme slots and their layout; read, write live, save, revert |
@@ -87,7 +87,7 @@ that Vial Armed probes on connect:
 | `HUD_*` | the HUD's sources, colour roles and fonts (for the preview); read, write live, store or revert the layout; push numbers and text from the host (no reply, so the agent never gets in the way) |
 
 The feature flags decide what's shown: RGB Matrix opens the Lighting page and replaces the VialRGB one,
-COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page, a screen opens the Screen page, theme slots open the Themes page, a HUD opens the HUD page. Effect names, colours
+COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep, NKRO, SnapTap and the like fill the Device page, theme slots add THEMES to Lighting, a screen opens the Screen page with HUD and ANIMATION & CLOCK. Effect names, colours
 and the LED layout come from the keyboard too, so the GUI hardcodes nothing about a particular board.
 Without qmk-armed, Vial Armed falls back to the stock Vial lighting page.
 

@@ -31,6 +31,7 @@ from editor.armed_device import ArmedDevice
 from editor.armed_screen import ArmedScreen
 from editor.armed_themes import ArmedThemes
 from editor.armed_hud import ArmedHud, AgentHost
+from editor.editor_group import EditorGroup
 from tabbed_keycodes import TabbedKeycodes
 from editor.tap_dance import TapDance
 from unlocker import Unlocker
@@ -100,10 +101,12 @@ class MainWindow(QMainWindow):
         self.armed_themes = ArmedThemes(self.layout_editor)
         self.hud_agent = AgentHost()
         self.armed_hud = ArmedHud(self.hud_agent)
+        self.lighting_group = EditorGroup([(self.armed_lighting, "EFFECTS"), (self.armed_themes, "THEMES")])
+        self.screen_group = EditorGroup([(self.armed_hud, "HUD"), (self.armed_screen, "ANIMATION & CLOCK")])
 
         self.editors = [(self.keymap_editor, "Keymap"), (self.layout_editor, "Layout"), (self.macro_recorder, "Macros"),
-                        (self.rgb_configurator, "Lighting"), (self.armed_lighting, "Lighting"),
-                        (self.armed_themes, "Themes"), (self.armed_screen, "Screen"), (self.armed_hud, "HUD"),
+                        (self.rgb_configurator, "Lighting"), (self.lighting_group, "Lighting"),
+                        (self.screen_group, "Screen"),
                         (self.tap_dance, "Tap Dance"), (self.combos, "Combos"),
                         (self.key_override, "Key Overrides"), (self.alt_repeat_key, "Alt Repeat Key"),
                         (self.qmk_settings, "QMK Settings"), (self.matrix_tester, "Matrix tester"),
@@ -487,8 +490,8 @@ class MainWindow(QMainWindow):
 
         for e in [self.layout_editor, self.keymap_editor, self.firmware_flasher, self.macro_recorder,
                   self.tap_dance, self.combos, self.key_override, self.alt_repeat_key,
-                  self.qmk_settings, self.matrix_tester, self.rgb_configurator, self.armed_lighting,
-                  self.armed_device, self.armed_screen, self.armed_themes, self.armed_hud]:
+                  self.qmk_settings, self.matrix_tester, self.rgb_configurator, self.lighting_group,
+                  self.armed_device, self.screen_group]:
             e.rebuild(self.autorefresh.current_device)
         self.hud_agent.set_device(self.autorefresh.current_device)
         self.update_armed_status()

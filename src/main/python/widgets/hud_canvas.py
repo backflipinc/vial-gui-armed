@@ -143,8 +143,8 @@ class HudCanvas(QWidget):
         qp.end()
 
     def band_rect(self):
-        (x0, y0), (x1, y1) = self.band
-        return QRect(QPoint(min(x0, x1), min(y0, y1)), QPoint(max(x0, x1), max(y0, y1)))
+        a, b = self.band
+        return QRect(QPoint(min(a.x(), b.x()), min(a.y(), b.y())), QPoint(max(a.x(), b.x()), max(a.y(), b.y())))
 
     # ---- mouse
 

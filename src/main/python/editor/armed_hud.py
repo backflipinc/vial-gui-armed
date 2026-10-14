@@ -464,7 +464,9 @@ class ArmedHud(BasicEditor):
         self.list.setDragDropMode(QAbstractItemView.InternalMove)
         self.list.setToolTip(tr("ArmedHud", "The top one is drawn last, over the others. Drag to change the order"))
         self.list.itemSelectionChanged.connect(self.on_list_selection)
-        self.list.model().rowsMoved.connect(self.on_rows_moved)
+        # a drag inside the list arrives as a move or as a remove + insert, depending on the Qt version
+        for sig in (self.list.model().rowsMoved, self.list.model().rowsInserted, self.list.model().rowsRemoved):
+            sig.connect(lambda *a: None if self.updating else QTimer.singleShot(0, self.on_rows_moved))
         list_frame.box.addWidget(self.list, 1)
         row = QHBoxLayout()
         row.setSpacing(4)
@@ -1105,17 +1107,17 @@ class ArmedHud(BasicEditor):
         self.refresh_buttons()
         self.refresh_status()
 
-    def on_rows_moved(self, *args):
-        if self.updating:
-            return
+    def on_rows_moved(self):
+        if self.updating or self.list.count() != len(self.hud.widgets):
+            return  # mid-drop: the item is removed but not inserted yet
         order = [self.list.item(r).data(Qt.UserRole) for r in range(self.list.count())][::-1]
-        if order == list(range(len(order))):
+        if order == list(range(len(order))) or sorted(order) != list(range(len(order))):
             return
         self.snapshot()
         picked = [self.hud.widgets[i] for i in self.sel]
         self.hud.widgets = [self.hud.widgets[i] for i in order]
-        self.sel = [self.hud.widgets.index(w) for w in picked]
-        QTimer.singleShot(0, self.changed)
+        self.sel = [next(k for k, x in enumerate(self.hud.widgets) if x is w) for w in picked]
+        self.changed()
 
     def on_activate(self, i):
         self.set_selection([i])
@@ -1309,7 +1311,7 @@ class ArmedHud(BasicEditor):
             return
         self.snapshot()
         self.hud.widgets = [self.hud.widgets[i] for i in order]
-        self.sel = [self.hud.widgets.index(w) for w in picked]
+        self.sel = [next(k for k, x in enumerate(self.hud.widgets) if x is w) for w in picked]
         self.changed()
         self.sync_list_selection()
 

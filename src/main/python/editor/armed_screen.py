@@ -468,10 +468,15 @@ class ArmedScreen(BasicEditor):
 
     def update_buttons(self):
         idle = self.job is None
+        # megabytes at ~15 ms per 28-byte packet: USB only
+        bulk = idle and not getattr(self.device, "dongle", False)
         self.btn_open.setEnabled(idle)
-        self.btn_upload.setEnabled(idle and bool(self.frames) and self.stream is not None)
-        self.btn_backup.setEnabled(idle and bool(self.info and self.info.frames))
-        self.btn_restore.setEnabled(idle and self.info is not None)
+        self.btn_upload.setEnabled(bulk and bool(self.frames) and self.stream is not None)
+        self.btn_backup.setEnabled(bulk and bool(self.info and self.info.frames))
+        self.btn_restore.setEnabled(bulk and self.info is not None)
+        tip = "" if bulk or not idle else tr("ArmedScreen", "Connect the keyboard by USB to transfer animations")
+        for btn in (self.btn_upload, self.btn_backup, self.btn_restore):
+            btn.setToolTip(tip)
         self.mode.setEnabled(idle)
         self.clock_fmt.setEnabled(idle)
         self.btn_sync.setEnabled(idle)

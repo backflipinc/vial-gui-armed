@@ -175,7 +175,11 @@ class MockDevice:
 
     def read(self, sz, timeout_ms=None):
         assert sz == 32
-        resp = self.vk.process(self.msg)
+        # like a real device: one reply per request, nothing when idle
+        msg, self.msg = getattr(self, "msg", None), None
+        if msg is None:
+            return b""
+        resp = self.vk.process(msg)
         assert len(resp) <= 32
         resp += b"\x00" * (32 - len(resp))
         return resp

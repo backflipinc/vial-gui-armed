@@ -4,7 +4,7 @@ import time
 from hidproxy import hid
 from protocol.keyboard_comm import Keyboard
 from protocol.dummy_keyboard import DummyKeyboard
-from util import MSG_LEN, pad_for_vibl
+from util import MSG_LEN, pad_for_vibl, hid_send, dongle_send
 
 
 class VialDevice:
@@ -38,16 +38,17 @@ class VialDevice:
 
 class VialKeyboard(VialDevice):
 
-    def __init__(self, dev, sideload=False, via_stack=False):
+    def __init__(self, dev, sideload=False, via_stack=False, dongle=False):
         super().__init__(dev)
         self.via_id = str(dev["vendor_id"] * 65536 + dev["product_id"])
         self.sideload = sideload
         self.via_stack = via_stack
+        self.dongle = dongle
         self.keyboard = None
 
     def open(self, override_json=None):
         super().open(override_json)
-        self.keyboard = Keyboard(self.dev)
+        self.keyboard = Keyboard(self.dev, usb_send=dongle_send if self.dongle else hid_send)
         self.keyboard.reload(override_json)
 
     def title(self):
@@ -56,6 +57,8 @@ class VialKeyboard(VialDevice):
             s += " [sideload]"
         elif self.via_stack:
             s += " [VIA]"
+        elif self.dongle:
+            s += " [2.4G]"
         return s
 
     def get_uid(self):

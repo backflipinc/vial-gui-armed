@@ -2,6 +2,7 @@
 import logging
 import os
 import pathlib
+import struct
 import sys
 import time
 from logging.handlers import RotatingFileHandler
@@ -24,6 +25,11 @@ VIBL_SERIAL_NUMBER_MAGIC = "vibl:d4f8159c"
 
 MSG_LEN = 32
 
+# 2.4G dongles that tunnel raw HID to a qmk-armed keyboard; they carry no Vial serial magic
+VIAL_DONGLES = {(0x0C45, 0xFEFE)}
+DONGLE_REPROBE_S = 5
+_dongle_probes = {}
+
 # these should match what we have in vial-qmk/keyboards/vial_example
 # so that people don't accidentally reuse a sample keyboard UID
 EXAMPLE_KEYBOARDS = [
@@ -37,7 +43,7 @@ EXAMPLE_KEYBOARDS = [
 EXAMPLE_KEYBOARD_PREFIX = 0xA6867BDFD3B00F
 
 
-def hid_send(dev, msg, retries=1):
+def hid_send(dev, msg, retries=1, timeout_ms=500, retry_delay=0.5):
     if len(msg) > MSG_LEN:
         raise RuntimeError("message must be less than 32 bytes")
     msg += b"\x00" * (MSG_LEN - len(msg))
@@ -48,14 +54,18 @@ def hid_send(dev, msg, retries=1):
     while retries > 0:
         retries -= 1
         if not first:
-            time.sleep(0.5)
+            time.sleep(retry_delay)
         first = False
         try:
+            if sys.platform != "emscripten":
+                # a reply that missed the previous timeout (wireless link) would answer this request
+                while dev.read(MSG_LEN, timeout_ms=1):
+                    pass
             # add 00 at start for hidapi report id
             if dev.write(b"\x00" + msg) != MSG_LEN + 1:
                 continue
 
-            data = bytes(dev.read(MSG_LEN, timeout_ms=500))
+            data = bytes(dev.read(MSG_LEN, timeout_ms=timeout_ms))
             if not data:
                 continue
         except OSError:
@@ -93,6 +103,30 @@ def is_rawhid(desc, quiet):
     return True
 
 
+def dongle_send(dev, msg, retries=1):
+    # the radio drops a reply now and then; asking again right away is cheaper than waiting
+    return hid_send(dev, msg, retries=max(retries, 5) * 4, timeout_ms=150, retry_delay=0)
+
+
+def dongle_has_vial(desc):
+    # the dongle enumerates even when the keyboard is off or runs other firmware, so ask the keyboard
+    now = time.monotonic()
+    ok, when = _dongle_probes.get(desc["path"], (False, 0))
+    if ok or now - when < DONGLE_REPROBE_S:
+        return ok
+    dev = hid.device()
+    try:
+        dev.open_path(desc["path"])
+        data = dongle_send(dev, struct.pack("BB", 0xFE, 0x00), retries=2)
+        ok = data[4:12] != b"\x00" * 8
+    except (OSError, RuntimeError):
+        ok = False
+    finally:
+        dev.close()
+    _dongle_probes[desc["path"]] = (ok, now)
+    return ok
+
+
 def find_vial_devices(via_stack_json, sideload_vid=None, sideload_pid=None, quiet=False):
     from vial_device import VialBootloader, VialKeyboard, VialDummyKeyboard
 
@@ -118,6 +152,13 @@ def find_vial_devices(via_stack_json, sideload_vid=None, sideload_pid=None, quie
                     dev["vendor_id"], dev["product_id"], dev["serial_number"], dev["path"]
                 ))
             filtered.append(VialBootloader(dev))
+        elif (dev["vendor_id"], dev["product_id"]) in VIAL_DONGLES:
+            if not quiet:
+                logging.info("Trying VID={:04X}, PID={:04X}, path={} - wireless dongle".format(
+                    dev["vendor_id"], dev["product_id"], dev["path"]
+                ))
+            if is_rawhid(dev, quiet) and dongle_has_vial(dev):
+                filtered.append(VialKeyboard(dev, dongle=True))
         elif str(dev["vendor_id"] * 65536 + dev["product_id"]) in via_stack_json["definitions"]:
             if not quiet:
                 logging.info("Matching VID={:04X}, PID={:04X}, serial={}, path={} - VIA stack".format(

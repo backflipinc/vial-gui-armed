@@ -206,6 +206,8 @@ def prepare(qtbot, keyboard_json, combos=None, tap_dance=None):
     mw = MainWindow(FakeAppctx())
     qtbot.addWidget(mw)
     mw.show()
+    # the window connects right after it is shown
+    qtbot.waitUntil(lambda: mw.autorefresh.current_device is not None, timeout=5000)
     # keep reference to MainWindow for the duration of tests
     # when MainWindow goes out of scope some KeyWidgets are still registered within KeycodeDisplay which causes UaF
     all_mw.append(mw)

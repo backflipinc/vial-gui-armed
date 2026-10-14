@@ -81,16 +81,17 @@ class Combos(BasicEditor):
         self.combo_entries = []
         self.combo_entries_available = []
         self.tabs = TabWidgetWithKeycodes()
-        for x in range(128):
-            entry = ComboEntryUI(x)
-            entry.key_changed.connect(self.on_key_changed)
-            self.combo_entries_available.append(entry)
 
         self.addWidget(self.tabs)
 
     def rebuild_ui(self):
         while self.tabs.count() > 0:
             self.tabs.removeTab(0)
+        # made as needed: building all 128 up front slowed down startup
+        while len(self.combo_entries_available) < self.keyboard.combo_count:
+            entry = ComboEntryUI(len(self.combo_entries_available))
+            entry.key_changed.connect(self.on_key_changed)
+            self.combo_entries_available.append(entry)
         self.combo_entries = self.combo_entries_available[:self.keyboard.combo_count]
         for x, e in enumerate(self.combo_entries):
             self.tabs.addTab(e.widget(), str(x + 1))

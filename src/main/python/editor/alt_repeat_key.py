@@ -184,16 +184,17 @@ class AltRepeatKey(BasicEditor):
         self.alt_repeat_key_entries = []
         self.alt_repeat_key_entries_available = []
         self.tabs = TabWidgetWithKeycodes()
-        for x in range(128):
-            entry = AltRepeatKeyEntryUI(x)
-            entry.changed.connect(self.on_change)
-            self.alt_repeat_key_entries_available.append(entry)
 
         self.addWidget(self.tabs)
 
     def rebuild_ui(self):
         while self.tabs.count() > 0:
             self.tabs.removeTab(0)
+        # made as needed: building all 128 up front cost a second at startup
+        while len(self.alt_repeat_key_entries_available) < self.keyboard.alt_repeat_key_count:
+            entry = AltRepeatKeyEntryUI(len(self.alt_repeat_key_entries_available))
+            entry.changed.connect(self.on_change)
+            self.alt_repeat_key_entries_available.append(entry)
         self.alt_repeat_key_entries = self.alt_repeat_key_entries_available[:self.keyboard.alt_repeat_key_count]
         for x, e in enumerate(self.alt_repeat_key_entries):
             self.tabs.addTab(e.widget(), str(x + 1))

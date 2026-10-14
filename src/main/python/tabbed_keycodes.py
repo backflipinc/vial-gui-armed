@@ -226,16 +226,38 @@ class TabbedKeycodes(QWidget):
         self.is_tray = False
 
         self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        # thousands of buttons each: built when first shown, not at startup
+        self._all = None
+        self._basic = None
+        self.keycode_filter = keycode_filter_any
+        self.set_keycode_filter(keycode_filter_any)
 
-        self.all_keycodes = FilteredTabbedKeycodes()
-        self.basic_keycodes = FilteredTabbedKeycodes(keycode_filter=keycode_filter_masked)
-        for opt in [self.all_keycodes, self.basic_keycodes]:
+    def palette(self, keycode_filter):
+        masked = keycode_filter == keycode_filter_masked
+        opt = self._basic if masked else self._all
+        if opt is None:
+            opt = FilteredTabbedKeycodes(keycode_filter=keycode_filter_masked if masked else keycode_filter_any)
             opt.keycode_changed.connect(self.keycode_changed)
             opt.anykey.connect(self.anykey)
             self.layout.addWidget(opt)
+            if masked:
+                self._basic = opt
+            else:
+                self._all = opt
+        return opt
 
-        self.setLayout(self.layout)
-        self.set_keycode_filter(keycode_filter_any)
+    @property
+    def all_keycodes(self):
+        return self.palette(keycode_filter_any)
+
+    @property
+    def basic_keycodes(self):
+        return self.palette(keycode_filter_masked)
+
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self.set_keycode_filter(self.keycode_filter)
 
     @classmethod
     def set_tray(cls, tray):
@@ -272,13 +294,15 @@ class TabbedKeycodes(QWidget):
             self.target.on_anykey()
 
     def recreate_keycode_buttons(self):
-        for opt in [self.all_keycodes, self.basic_keycodes]:
-            opt.recreate_keycode_buttons()
+        for opt in [self._all, self._basic]:
+            if opt is not None:
+                opt.recreate_keycode_buttons()
 
     def set_keycode_filter(self, keycode_filter):
-        if keycode_filter == keycode_filter_masked:
-            self.all_keycodes.hide()
-            self.basic_keycodes.show()
-        else:
-            self.all_keycodes.show()
-            self.basic_keycodes.hide()
+        self.keycode_filter = keycode_filter
+        if not self.isVisible():
+            return
+        shown = self.palette(keycode_filter)
+        for opt in [self._all, self._basic]:
+            if opt is not None:
+                opt.setVisible(opt is shown)

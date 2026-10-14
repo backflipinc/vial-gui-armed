@@ -165,7 +165,16 @@ class MainWindow(QMainWindow):
                 logging.warning("Failed to parse stored via_keyboards.json: {}".format(e))
 
         # make sure initial state is valid
-        self.on_click_refresh()
+        if sys.platform == "emscripten":
+            self.on_click_refresh()
+        else:
+            # show the window first: reading the keyboard takes a couple of seconds
+            self.lbl_no_devices.hide()
+            if themes.Theme.is_armed():
+                self.lbl_status.setText('<span style="color:{}">\u25a0</span> CONNECTING\u2026'.format(armed.ACC))
+            # the background scan stays off until then, or it would open the keyboard a second time
+            self.autorefresh._lock()
+            QTimer.singleShot(50, self.first_refresh)
 
         if sys.platform == "emscripten":
             import vialglue
@@ -413,6 +422,11 @@ class MainWindow(QMainWindow):
             if dialog.exec_() == QDialog.Accepted:
                 with open(dialog.selectedFiles()[0], "wb") as outf:
                     outf.write(self.keymap_editor.save_layout())
+
+    def first_refresh(self):
+        self.autorefresh._unlock()
+        self.on_click_refresh()
+        self.update_armed_status()
 
     def on_click_refresh(self):
         self.autorefresh.update(quiet=False, hard=True)

@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # qmk-armed protocol (command 0xAD): settings VIA / Vial don't cover, reported per keyboard
+import json
 import logging
+import os
 import struct
 from datetime import datetime, timedelta
 
@@ -197,12 +199,40 @@ class QmkArmed:
             out.append(data[4:])
         return out
 
+    def cached(self, name, fetch):
+        """ Lists that only change with the firmware, kept on disk per keyboard and firmware version:
+            ~150 requests saved on every connect (seconds through the dongle) """
+        uid = getattr(self.keyboard, "keyboard_id", -1)
+        if not isinstance(uid, int) or uid < 0:
+            return fetch()
+        from hud_agent import config_dir
+        path = os.path.join(config_dir(), "cache", "{:016x}-{}-{:x}.json".format(uid, self.version_str, self.features))
+        try:
+            with open(path) as f:
+                store = json.load(f)
+        except (OSError, ValueError):
+            store = {}
+        if name in store:
+            return [bytes.fromhex(x) for x in store[name]]
+        out = fetch()
+        store[name] = [bytes(x).hex() for x in out]
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path + ".tmp", "w") as f:
+                json.dump(store, f)
+            os.replace(path + ".tmp", path)
+        except OSError as e:
+            logging.warning("qmk-armed cache: %s", e)
+        return out
+
     def load(self, counts):
-        self.effects = [ArmedEffect(d[0], d[1], _cstr(d[2:])) for d in self._list(L_EFFECTS, counts[L_EFFECTS])]
-        self.colors = [ArmedColor(d[0], d[1], _cstr(d[2:])) for d in self._list(L_COLORS, counts[L_COLORS])]
-        self.strip_modes = [_cstr(d) for d in self._list(L_STRIP_MODES, counts[L_STRIP_MODES])]
-        self.sleep_minutes = [d[0] for d in self._list(L_SLEEP, counts[L_SLEEP])]
-        self.leds = [ArmedLed(d[0], d[1], d[2], d[3], d[4]) for d in self._list(L_LEDS, counts[L_LEDS])]
+        def lst(kind):
+            return self.cached("list{}-{}".format(kind, counts[kind]), lambda: self._list(kind, counts[kind]))
+        self.effects = [ArmedEffect(d[0], d[1], _cstr(d[2:])) for d in lst(L_EFFECTS)]
+        self.colors = [ArmedColor(d[0], d[1], _cstr(d[2:])) for d in lst(L_COLORS)]
+        self.strip_modes = [_cstr(d) for d in lst(L_STRIP_MODES)]
+        self.sleep_minutes = [d[0] for d in lst(L_SLEEP)]
+        self.leds = [ArmedLed(d[0], d[1], d[2], d[3], d[4]) for d in lst(L_LEDS)]
         self.reload_values()
 
     def reload_values(self):
@@ -360,13 +390,16 @@ class QmkArmed:
         return None if data[0] == UNHANDLED else HudInfo(data)
 
     def hud_sources(self, info):
-        out = []
-        for i in range(info.sources):
-            data = self._send(SUB_HUD_SOURCE, i)
-            if data[0] == UNHANDLED:
-                break
-            out.append(HudSource(data[3], data[4], None if data[5] == 0xFF else data[5], _cstr(data[6:])))
-        return out
+        def fetch():
+            out = []
+            for i in range(info.sources):
+                data = self._send(SUB_HUD_SOURCE, i)
+                if data[0] == UNHANDLED:
+                    break
+                out.append(data[3:])
+            return out
+        return [HudSource(d[0], d[1], None if d[2] == 0xFF else d[2], _cstr(d[3:]))
+                for d in self.cached("hud-sources-{}".format(info.sources), fetch)]
 
     def hud_value(self, source):
         """ (valid, hint, dec, num, text) or None """

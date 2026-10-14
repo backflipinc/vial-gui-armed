@@ -107,11 +107,6 @@ class TapDance(BasicEditor):
         self.tap_dance_entries = []
         self.tap_dance_entries_available = []
         self.tabs = TabWidgetWithKeycodes()
-        for x in range(128):
-            entry = TapDanceEntryUI(x)
-            entry.key_changed.connect(self.on_key_changed)
-            entry.timing_changed.connect(self.on_timing_changed)
-            self.tap_dance_entries_available.append(entry)
 
         self.addWidget(self.tabs)
         buttons = QHBoxLayout()
@@ -127,6 +122,12 @@ class TapDance(BasicEditor):
     def rebuild_ui(self):
         while self.tabs.count() > 0:
             self.tabs.removeTab(0)
+        # made as needed: building all 128 up front slowed down startup
+        while len(self.tap_dance_entries_available) < self.keyboard.tap_dance_count:
+            entry = TapDanceEntryUI(len(self.tap_dance_entries_available))
+            entry.key_changed.connect(self.on_key_changed)
+            entry.timing_changed.connect(self.on_timing_changed)
+            self.tap_dance_entries_available.append(entry)
         self.tap_dance_entries = self.tap_dance_entries_available[:self.keyboard.tap_dance_count]
         for x, e in enumerate(self.tap_dance_entries):
             self.tabs.addTab(e.widget(), str(x))

@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Device page: keyboard options from the on-screen menu that Vial doesn't cover (NKRO, Win lock, SnapTap,
-# Bluetooth slot, display accent and timeout, auto-sleep), shown for what the keyboard reports
+# Bluetooth slot, auto-sleep), shown for what the keyboard reports; display options are under Screen
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGridLayout
 
 from editor.basic_editor import BasicEditor
 from hud_layout import S_LINK, S_SNAPTAP
-from protocol.qmk_armed import V_SLEEP, V_NKRO, V_GUI_LOCK, V_SNAPTAP, V_ACCENT, V_SCREEN_OFF, V_BT_SLOT, \
-    F_SLEEP, F_KEYMAP, F_SNAPTAP, F_DISPLAY, F_BT_SLOT, F_HUD
+from protocol.qmk_armed import V_SLEEP, V_NKRO, V_GUI_LOCK, V_SNAPTAP, V_BT_SLOT, F_SLEEP, F_KEYMAP, F_SNAPTAP, \
+    F_BT_SLOT, F_HUD
 from vial_device import VialKeyboard
 from widgets.armed_controls import BracketFrame, Segmented
 from util import tr
@@ -41,24 +41,17 @@ class ArmedDevice(BasicEditor):
                              "menu, or the pairing keys on the Fn layer.")
         self.lbl_link = self.status_label(self.wireless_frame)
 
-        self.display_frame = BracketFrame("DISPLAY")
-        self.accent = self.row(self.display_frame, V_ACCENT, "ACCENT", [],
-                               "The screen's accent colour; HUD widgets in ACCENT follow it.")
-        self.screen_off = self.row(self.display_frame, V_SCREEN_OFF, "SCREEN OFF", [],
-                                   "Turns the screen off after this much idle time, a key press wakes it.")
-
         self.power_frame = BracketFrame("POWER")
         self.sleep = self.row(self.power_frame, V_SLEEP, "AUTO-SLEEP", [],
                               "In BT and 2.4 GHz the keyboard sleeps after this much idle time; a key press wakes it.")
 
-        for f in (self.keyboard_frame, self.wireless_frame, self.display_frame, self.power_frame):
+        for f in (self.keyboard_frame, self.wireless_frame, self.power_frame):
             f.box.addStretch(1)
         grid = QGridLayout()
         grid.setSpacing(18)
         grid.addWidget(self.keyboard_frame, 0, 0)
         grid.addWidget(self.wireless_frame, 0, 1)
-        grid.addWidget(self.display_frame, 1, 0)
-        grid.addWidget(self.power_frame, 1, 1)
+        grid.addWidget(self.power_frame, 1, 0)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
         self.addLayout(grid)
@@ -93,7 +86,7 @@ class ArmedDevice(BasicEditor):
         if not isinstance(self.device, VialKeyboard):
             return False
         armed = self.device.keyboard.armed
-        return armed is not None and any(armed.has(f) for f in (F_SLEEP, F_KEYMAP, F_SNAPTAP, F_DISPLAY, F_BT_SLOT))
+        return armed is not None and any(armed.has(f) for f in (F_SLEEP, F_KEYMAP, F_SNAPTAP, F_BT_SLOT))
 
     def rebuild(self, device):
         super().rebuild(device)
@@ -106,8 +99,6 @@ class ArmedDevice(BasicEditor):
         self.sleep_order = sorted(range(len(minutes)), key=lambda i: minutes[i] or 10 ** 6)
         self.sleep.set_labels(["{}M".format(minutes[i]) if minutes[i] else "OFF" for i in self.sleep_order])
         self.snaptap.set_labels(io.snaptap_modes)
-        self.accent.set_labels([c.name for c in io.accents])
-        self.screen_off.set_labels([name for _, name in io.screen_off])
         self.load()
 
     def load(self):
@@ -126,7 +117,6 @@ class ArmedDevice(BasicEditor):
             seg.set_current(v)
         self.keyboard_frame.setVisible(any(v in io.values for v in (V_NKRO, V_GUI_LOCK, V_SNAPTAP)))
         self.wireless_frame.setVisible(V_BT_SLOT in io.values)
-        self.display_frame.setVisible(any(v in io.values for v in (V_ACCENT, V_SCREEN_OFF)))
         self.power_frame.setVisible(V_SLEEP in io.values)
         self.refresh_status()
 

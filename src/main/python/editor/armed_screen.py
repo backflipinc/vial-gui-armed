@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QPush
 import screen_media
 from editor.basic_editor import BasicEditor
 from unlocker import Unlocker
-from protocol.qmk_armed import V_SCREEN, V_CLOCK, F_SCREEN, F_CLOCK, ArmedError
+from protocol.qmk_armed import V_SCREEN, V_CLOCK, V_ACCENT, V_SCREEN_OFF, F_SCREEN, F_CLOCK, F_DISPLAY, ArmedError
 from vial_device import VialKeyboard
 from widgets.armed_controls import BracketFrame, Segmented
 from util import tr
@@ -91,6 +91,29 @@ class ArmedScreen(BasicEditor):
         note.setObjectName("armedHint")
         note.setWordWrap(True)
         main.box.addWidget(note)
+
+        # DISPLAY: the on-screen UI's accent and the screen-off timeout
+        self.display = BracketFrame("DISPLAY")
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(8)
+        for r, text in enumerate(("ACCENT", "SCREEN OFF")):
+            lbl = QLabel(text)
+            lbl.setObjectName("armedKey")
+            grid.addWidget(lbl, r, 0)
+        self.accent = Segmented()
+        self.accent.changed.connect(lambda i: self.io.set(V_ACCENT, i))
+        grid.addWidget(self.accent, 0, 1, Qt.AlignLeft)
+        self.screen_off = Segmented()
+        self.screen_off.changed.connect(lambda i: self.io.set(V_SCREEN_OFF, i))
+        grid.addWidget(self.screen_off, 1, 1, Qt.AlignLeft)
+        grid.setColumnStretch(2, 1)
+        self.display.box.addLayout(grid)
+        note = QLabel(tr("ArmedScreen", "The accent colours the menu and HUD widgets set to ACCENT. The screen turns off "
+                                        "after this much idle time, a key press wakes it. Also in its menu: DISPLAY."))
+        note.setObjectName("armedHint")
+        note.setWordWrap(True)
+        self.display.box.addWidget(note)
 
         # CLOCK
         self.clock = BracketFrame("CLOCK")
@@ -220,8 +243,9 @@ class ArmedScreen(BasicEditor):
         grid = QGridLayout()
         grid.setSpacing(18)
         grid.addWidget(main, 0, 0)
-        grid.addWidget(stored, 0, 1)
-        grid.addWidget(self.clock, 1, 0, 1, 2)
+        grid.addWidget(self.display, 0, 1)
+        grid.addWidget(self.clock, 1, 0)
+        grid.addWidget(stored, 1, 1)
         grid.addWidget(new, 2, 0, 1, 2)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
@@ -244,6 +268,9 @@ class ArmedScreen(BasicEditor):
         if self.io is None:
             return
         self.clock.setVisible(self.io.has(F_CLOCK))
+        self.display.setVisible(self.io.has(F_DISPLAY) and bool(self.io.accents))
+        self.accent.set_labels([c.name for c in self.io.accents])
+        self.screen_off.set_labels([name for _, name in self.io.screen_off])
         if self.io.has(F_CLOCK):
             self.sync_clock()
             self.clock_timer.start()
@@ -265,6 +292,8 @@ class ArmedScreen(BasicEditor):
     def load(self):
         self.mode.set_current(self.io.get(V_SCREEN))
         self.clock_fmt.set_current(self.io.get(V_CLOCK))
+        self.accent.set_current(self.io.get(V_ACCENT))
+        self.screen_off.set_current(self.io.get(V_SCREEN_OFF))
         if self.info is None:
             self.lbl_stored.setText("—")
         elif self.info.frames:
@@ -479,6 +508,8 @@ class ArmedScreen(BasicEditor):
             btn.setToolTip(tip)
         self.mode.setEnabled(idle)
         self.clock_fmt.setEnabled(idle)
+        self.accent.setEnabled(idle)
+        self.screen_off.setEnabled(idle)
         self.btn_sync.setEnabled(idle)
         for seg in (self.fit, self.fps, self.slide):
             seg.setEnabled(idle)

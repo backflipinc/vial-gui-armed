@@ -101,8 +101,9 @@ class MainWindow(QMainWindow):
         self.armed_themes = ArmedThemes(self.layout_editor)
         self.hud_agent = AgentHost()
         self.armed_hud = ArmedHud(self.hud_agent)
-        self.lighting_group = EditorGroup([(self.armed_lighting, "EFFECTS"), (self.armed_themes, "THEMES")])
-        self.screen_group = EditorGroup([(self.armed_hud, "HUD"), (self.armed_screen, "ANIMATION & CLOCK")])
+        # settings first, then the editor, on both pages
+        self.lighting_group = EditorGroup([(self.armed_lighting, "EFFECTS"), (self.armed_themes, "THEME EDITOR")])
+        self.screen_group = EditorGroup([(self.armed_screen, "SETTINGS"), (self.armed_hud, "HUD EDITOR")])
 
         self.editors = [(self.keymap_editor, "Keymap"), (self.layout_editor, "Layout"), (self.macro_recorder, "Macros"),
                         (self.rgb_configurator, "Lighting"), (self.lighting_group, "Lighting"),

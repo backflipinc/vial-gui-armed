@@ -75,6 +75,10 @@ if __name__ == '__main__':
         from linux_keystroke_recorder import linux_keystroke_recorder
 
         linux_keystroke_recorder()
+    elif len(sys.argv) == 2 and sys.argv[1] == "--agent":
+        from hud_agent import run_headless
+
+        run_headless()
     else:
         appctxt = VialApplicationContext()       # 1. Instantiate ApplicationContext
         init_logger()

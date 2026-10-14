@@ -180,6 +180,10 @@ QMessageBox QLabel {{ color: {TXT}; }}
 #armedFrameTitle {{ font-family: "{HEAD}"; font-size: 17px; font-weight: bold; color: {TXT}; }}
 #armedHint {{ color: {DIM}; font-size: 12px; }}
 #armedKey {{ color: {MID}; }}
+#armedSection {{ color: {ACC}; font-size: 12px; border-bottom: 1px solid {LINE}; padding: 6px 0 3px 0; }}
+#armedSwatch {{ padding: 0; border: 1px solid {LINE2}; }}
+#armedSwatch:checked {{ border: 2px solid {ACC}; }}
+#armedTool {{ padding: 4px 8px; }}
 #armedSeg QPushButton {{ padding: 4px 10px; margin: 0; border-right-width: 0; }}
 #armedSeg QPushButton:last-child {{ border-right-width: 1px; }}
 #armedSeg QPushButton:checked {{ background: {ACC}; color: {BG}; border-color: {ACC}; }}

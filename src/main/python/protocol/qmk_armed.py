@@ -4,13 +4,17 @@ import logging
 import struct
 from datetime import datetime, timedelta
 
+from util import dongle_send
+
 CMD_ARMED = 0xAD
 ARMED_PROTOCOL = 1
 
 SUB_INFO, SUB_LIST, SUB_GET, SUB_SET, SUB_SAVE, \
     SUB_SCREEN_INFO, SUB_SCREEN_BEGIN, SUB_SCREEN_DATA, SUB_SCREEN_END, SUB_SCREEN_READ, \
     SUB_THEME_INFO, SUB_THEME_READ, SUB_THEME_WRITE, SUB_THEME_SAVE, SUB_THEME_REVERT, \
-    SUB_CLOCK_GET, SUB_CLOCK_SET = range(17)
+    SUB_CLOCK_GET, SUB_CLOCK_SET, SUB_BOOTLOADER, \
+    SUB_HUD_INFO, SUB_HUD_SOURCE, SUB_HUD_VALUE, SUB_HUD_FONT, SUB_HUD_PALETTE, SUB_HUD_READ, SUB_HUD_WRITE, \
+    SUB_HUD_APPLY, SUB_HUD_REVERT, SUB_HUD_PUSH, SUB_HUD_TEXT = range(29)
 L_EFFECTS, L_COLORS, L_STRIP_MODES, L_SLEEP, L_LEDS = range(5)
 L_COUNT = 5
 
@@ -25,6 +29,7 @@ F_SLEEP = 1 << 4
 F_SCREEN = 1 << 5
 F_THEMES = 1 << 6
 F_CLOCK = 1 << 7
+F_HUD = 1 << 8
 
 FEATURE_VALUES = {
     F_RGB_MATRIX: (V_ENABLED, V_EFFECT, V_HUE, V_SAT, V_VAL, V_SPEED),
@@ -46,6 +51,10 @@ SCREEN_DATA_PAYLOAD = MSG_LEN - 4
 SCREEN_READ_PAYLOAD = MSG_LEN - 7
 SCREEN_WINDOW = 8  # requests in flight during an upload / read
 THEME_PAYLOAD = MSG_LEN - 6
+HUD_PAYLOAD = MSG_LEN - 5
+HUD_FONT_PAYLOAD = MSG_LEN - 8
+HUD_PUSH_SLOTS = 4
+HUD_TEXT_PAYLOAD = MSG_LEN - 7
 
 
 class ArmedError(Exception):
@@ -68,6 +77,23 @@ class ThemeInfo:
     def __init__(self, data):
         self.slots, self.layers, self.leds, self.size, self.format = struct.unpack_from("<BBBHB", data, 2)
         self.modes = list(data[8:8 + self.slots])
+
+
+class HudInfo:
+
+    def __init__(self, data):
+        (self.format, self.max_widgets, self.widget_size, self.layout_size, self.strings, self.host_values,
+         self.host_texts, self.text_len, self.fonts, self.colors, self.sources, self.width, self.height,
+         self.graphs, self.graph_points) = struct.unpack_from("<BBBHHBBBBBBHHBB", data, 2)
+
+
+class HudSource:
+
+    def __init__(self, sid, kind, dec, name):
+        self.id = sid
+        self.kind = kind
+        self.dec = dec  # None: the host decides (host slots)
+        self.name = name
 
 
 def _cstr(data):
@@ -326,3 +352,118 @@ class QmkArmed:
 
     def theme_revert(self, slot):
         self._send(SUB_THEME_REVERT, slot)
+
+    # ---- HUD (F_HUD), see docs/armed.md in qmk-armed
+
+    def hud_info(self):
+        data = self._send(SUB_HUD_INFO)
+        return None if data[0] == UNHANDLED else HudInfo(data)
+
+    def hud_sources(self, info):
+        out = []
+        for i in range(info.sources):
+            data = self._send(SUB_HUD_SOURCE, i)
+            if data[0] == UNHANDLED:
+                break
+            out.append(HudSource(data[3], data[4], None if data[5] == 0xFF else data[5], _cstr(data[6:])))
+        return out
+
+    def hud_value(self, source):
+        """ (valid, hint, dec, num, text) or None """
+        data = self._send(SUB_HUD_VALUE, source)
+        if data[0] == UNHANDLED:
+            return None
+        if data[1] != SUB_HUD_VALUE or data[2] != source:
+            raise ArmedError("a late reply to another request")
+        return bool(data[3]), data[4], data[5], struct.unpack_from("<i", data, 6)[0], _cstr(data[10:])
+
+    def hud_palette(self, info):
+        out = []
+        for role in range(info.colors):
+            data = self._send(SUB_HUD_PALETTE, role)
+            out.append(tuple(data[3:6]) if data[0] != UNHANDLED else (0, 0, 0))
+        return out
+
+    def hud_font(self, index, progress=lambda done, total: None):
+        """ the keyboard's QFF font, read in 24-byte pieces (pipelined over USB) """
+        def request(off, n):
+            return struct.pack("<BBBIB", CMD_ARMED, SUB_HUD_FONT, index, off, n)
+
+        data = self._send(SUB_HUD_FONT, index, *struct.pack("<IB", 0, HUD_FONT_PAYLOAD))
+        if data[0] == UNHANDLED:
+            raise ArmedError("font {} read failed".format(index))
+        size = struct.unpack_from("<I", data, 8 + 9)[0]
+        out = bytearray(data[8:8 + min(size, HUD_FONT_PAYLOAD)])
+        reqs = [(o, min(HUD_FONT_PAYLOAD, size - o)) for o in range(len(out), size, HUD_FONT_PAYLOAD)]
+        if self.keyboard.usb_send is dongle_send:
+            for o, n in reqs:
+                data = self._send(SUB_HUD_FONT, index, *struct.pack("<IB", o, n))
+                if data[0] == UNHANDLED:
+                    raise ArmedError("font {} read failed at byte {}".format(index, o))
+                out += data[8:8 + n]
+                progress(len(out), size)
+            return bytes(out)
+
+        def reply(i, data):
+            o, n = reqs[i]
+            if data[0] != CMD_ARMED or data[1] != SUB_HUD_FONT or struct.unpack_from("<I", data, 3)[0] != o:
+                raise ArmedError("font {} read failed at byte {}".format(index, o))
+            out.extend(data[8:8 + n])
+            progress(len(out), size)
+
+        self._pipeline([request(o, n) for o, n in reqs], reply, lambda: False, 2000)
+        return bytes(out)
+
+    def hud_read(self, info):
+        out = bytearray()
+        for off in range(0, info.layout_size, HUD_PAYLOAD):
+            n = min(HUD_PAYLOAD, info.layout_size - off)
+            data = self._send(SUB_HUD_READ, off & 0xFF, off >> 8, n)
+            if data[0] == UNHANDLED:
+                raise ArmedError("HUD read failed at byte {}".format(off))
+            out += data[5:5 + n]
+        return bytes(out)
+
+    def hud_write(self, blob, previous=None):
+        """ sends what differs from `previous` (the layout on the keyboard), then shows it """
+        for off in range(0, len(blob), HUD_PAYLOAD):
+            chunk = blob[off:off + HUD_PAYLOAD]
+            if previous is not None and previous[off:off + len(chunk)] == chunk:
+                continue
+            if self._send(SUB_HUD_WRITE, off & 0xFF, off >> 8, len(chunk), *chunk)[0] == UNHANDLED:
+                raise ArmedError("HUD write failed at byte {}".format(off))
+        if self._send(SUB_HUD_APPLY, 0)[0] == UNHANDLED:
+            raise ArmedError("the keyboard rejected the layout")
+
+    def hud_store(self):
+        if self._send(SUB_HUD_APPLY, 1)[0] == UNHANDLED:
+            raise ArmedError("the keyboard could not store the layout")
+
+    def hud_revert(self, factory=False):
+        self._send(SUB_HUD_REVERT, 1 if factory else 0)
+
+
+def hud_push_packets(values, ttl):
+    """ values: [(slot, decimals, int value)] -> HUD_PUSH reports; the keyboard sends no reply """
+    out = []
+    for i in range(0, len(values), HUD_PUSH_SLOTS):
+        part = values[i:i + HUD_PUSH_SLOTS]
+        msg = struct.pack("BBBB", CMD_ARMED, SUB_HUD_PUSH, min(255, ttl), len(part))
+        for slot, dec, num in part:
+            msg += struct.pack("<BBi", slot, dec, max(-2 ** 31, min(2 ** 31 - 1, num)))
+        out.append(msg)
+    return out
+
+
+def hud_text_packets(slot, text, ttl, limit):
+    """ HUD_TEXT reports for one text slot, ASCII, at most `limit` - 1 bytes """
+    raw = text.encode("ascii", "replace")[:limit - 1]
+    out = []
+    off = 0
+    while True:
+        chunk = raw[off:off + HUD_TEXT_PAYLOAD]
+        last = off + len(chunk) >= len(raw)
+        out.append(struct.pack("BBBBBBB", CMD_ARMED, SUB_HUD_TEXT, slot, min(255, ttl), off, len(chunk), int(last)) + chunk)
+        off += len(chunk)
+        if last:
+            return out

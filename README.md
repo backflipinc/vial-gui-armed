@@ -3,8 +3,9 @@
 A fork of [vial-gui](https://github.com/vial-kb/vial-gui) for keyboards running
 **[qmk-armed](https://github.com/backflipinc/qmk-armed)**: the Hi-Tech / Military Black look of the
 IO Type 84 Pro's on-screen UI, plus pages for everything the firmware can do beyond stock Vial — every
-RGB Matrix effect with a live preview, two-colour effects, the Fn overlay colour, the light bar, auto-sleep and your
-own picture, GIF or video on the keyboard's screen.
+RGB Matrix effect with a live preview, two-colour effects, the Fn overlay colour, the light bar, auto-sleep, your
+own picture, GIF or video on the keyboard's screen, and a HUD you lay out yourself and feed with your computer's
+metrics.
 
 ![Lighting](docs/screenshots/lighting.png)
 
@@ -27,6 +28,8 @@ own picture, GIF or video on the keyboard's screen.
 | 📏 **Light bar** | Mode (WPM, WPM bar, battery, link, scanner, off), colour and Caps Lock alert, with a 9-LED preview |
 | 💤 **Device** | Auto-sleep timer, with the options the keyboard offers |
 | 🎞️ **Screen** | Put a picture, GIF or video (with ffmpeg installed) on the keyboard's screen: fit, frame rate, slideshow, a preview of exactly what gets uploaded, progress with time left. Switch the main screen between the HUD and the animation; save and restore what's stored, including the stock animation. Sets the keyboard's clock from this computer when it connects, 24H / 12H / off |
+| 📟 **HUD** | Lay out the keyboard's main screen from widgets — text with values, bars, graphs, indicators, the battery icon, frames and lines, multi-line text — on a preview drawn pixel for pixel like the keyboard draws it, with its own fonts and colour roles, so the result keeps the look of the firmware. Drag with smart guides, resize, nudge with arrows; select several and align, distribute or match their sizes; reorder in the widget list; copy / paste, undo / redo, presets (keyboard default, system monitor, console, big clock), import / export as JSON. Live on the keyboard as you edit, SAVE keeps it |
+| 📡 **HUD agent** | Feeds the HUD with this computer's CPU / GPU load and temperature, RAM, VRAM, swap, network, disk, load average and laptop battery, plus the first number or the whole output of any command or script (Cyrillic is spelled in Latin letters). Runs inside Vial Armed, or without a window: `vial-armed --agent`, with a RUN AT LOGIN switch on Linux. Over USB and the 2.4 GHz dongle |
 | ⌨️ **Everything from Vial** | Keymap and knobs on all layers, macros, tap dance, combos, key overrides, QMK settings, matrix tester |
 | 🧭 **Status** | Link and lock state in the top bar, qmk-armed version, Vial protocol, layer count and keyboard UID in the footer |
 
@@ -38,7 +41,12 @@ own picture, GIF or video on the keyboard's screen.
 |---|---|
 | ![Themes](docs/screenshots/themes.png) | ![Screen](docs/screenshots/screen.png) |
 
-The original mockups are in [`design/`](design/).
+| HUD: layout | HUD: agent |
+|---|---|
+| ![HUD layout](docs/screenshots/hud.png) | ![HUD agent](docs/screenshots/hud-agent.png) |
+
+The original mockups are in [`design/`](design/); what the keyboard's own screen looks like, HUD layouts included, is in
+[qmk-armed's mockup](https://github.com/backflipinc/qmk-armed/blob/armed/keyboards/io/type84_pro/docs/images/ui-mockup.png).
 
 ## Install
 
@@ -76,16 +84,28 @@ that Vial Armed probes on connect:
 | `SCREEN_*` | screen size and what's stored; upload an animation as a compressed stream (pipelined, ~26 KiB/s over Vial's 32-byte reports); read it back |
 | `THEME_*` | theme slots and their layout; read, write live, save, revert |
 | `CLOCK_*` | read and set the keyboard's local time, whole seconds |
+| `HUD_*` | the HUD's sources, colour roles and fonts (for the preview); read, write live, store or revert the layout; push numbers and text from the host (no reply, so the agent never gets in the way) |
 
 The feature flags decide what's shown: RGB Matrix opens the Lighting page and replaces the VialRGB one,
-COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page, a screen opens the Screen page, theme slots open the Themes page. Effect names, colours
+COLOR 2, FN COLOR and LIGHT BAR add their panels, auto-sleep opens the Device page, a screen opens the Screen page, theme slots open the Themes page, a HUD opens the HUD page. Effect names, colours
 and the LED layout come from the keyboard too, so the GUI hardcodes nothing about a particular board.
 Without qmk-armed, Vial Armed falls back to the stock Vial lighting page.
 
 Protocol spec and how to add features to a keyboard: [qmk-armed/docs/armed.md](https://github.com/backflipinc/qmk-armed/blob/armed/docs/armed.md).
 Implementation here: [`protocol/qmk_armed.py`](src/main/python/protocol/qmk_armed.py), the animation encoder in
 [`screen_media.py`](src/main/python/screen_media.py), themes in [`lighting_theme.py`](src/main/python/lighting_theme.py)
-and the firmware's theme renderer ported to Python in [`theme_render.py`](src/main/python/theme_render.py).
+and the firmware's theme renderer ported to Python in [`theme_render.py`](src/main/python/theme_render.py);
+the HUD in [`hud_layout.py`](src/main/python/hud_layout.py), its renderer (Quantum Painter's fonts and colour maths)
+in [`hud_render.py`](src/main/python/hud_render.py) and the agent in [`hud_agent.py`](src/main/python/hud_agent.py).
+
+### HUD agent
+
+While Vial Armed runs, it sends what the HUD page's AGENT view lists: up to 16 numbers (H1–H16) and 4 texts (T1–T4).
+Pick them as sources (H1–H16, T1–T4) in the LAYOUT view. Each number is a metric or a command whose first printed number is taken;
+each text is a command whose output is shown (the end of it when it's longer than 159 characters). The settings
+live in `~/.config/vial-armed/hud-agent.json` (`%APPDATA%\vial-armed` on Windows); commands are never stored on the
+keyboard. To keep the HUD fed without the window, run `vial-armed --agent` (or tick RUN AT LOGIN): it finds the
+keyboard by itself, sets its clock, follows changes to the settings, and steps aside while Vial Armed is open.
 
 ## Development
 

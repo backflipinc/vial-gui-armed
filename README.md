@@ -46,15 +46,20 @@ Download the latest build from [Releases](https://github.com/backflipinc/vial-gu
 
 | | |
 |---|---|
-| Linux | `Vial-Armed-x86_64.AppImage` — `chmod +x` and run |
-| Windows | `Vial-Armed-setup.exe` (installer) or `Vial-Armed-win.zip` (portable) |
-| macOS | `Vial-Armed-mac.dmg` |
+| Linux | `vial-armed-<version>-x86_64.AppImage` — `chmod +x` and run; or `vial-armed_<version>_amd64.deb` (Debian / Ubuntu, installs to `/opt/vial-armed`) |
+| Windows | `vial-armed-<version>-setup.exe` (installer) or `vial-armed-<version>-win.zip` (portable) |
+| macOS | `vial-armed-<version>-mac.dmg` |
+
+The version is the release tag (`v1.5.0` → `1.5.0`); builds of untagged commits are named after the last tag and the
+commit (`1.5.0+3.gabc1234`), and **About vial-armed** shows the same.
 
 On Linux the keyboard needs a udev rule to be reachable without root. For the IO Type 84 Pro, qmk-armed ships one:
 [`70-io-type84-pro.rules`](https://github.com/backflipinc/qmk-armed/blob/armed/keyboards/io/type84_pro/udev/70-io-type84-pro.rules);
 other keyboards can use [Vial's](https://get.vial.today/manual/linux-udev.html).
 
-On the IO Type 84 Pro, set the mode switch to **USB**: in Bluetooth / 2.4 GHz modes it is off the USB bus and Vial can't see it.
+The IO Type 84 Pro (firmware 1.5+) is found by USB or through its **2.4 GHz dongle** (listed as `… [2.4G]`; mode switch
+on 2.4 GHz). Over the dongle each request takes ~20 ms, so connecting takes a few seconds, and screen animations are
+transferred over USB only. Bluetooth has no channel for it.
 
 ## How it works
 
@@ -96,7 +101,8 @@ fbs run
 Linux AppImage, the same way CI builds it (needs Docker):
 
 ```sh
-./util/linux-builder/build-in-docker.sh   # -> util/linux-builder/output/Vial-x86_64.AppImage
+python3 util/set_version.py              # optional: version from git, as CI does
+./util/linux-builder/build-in-docker.sh   # -> util/linux-builder/output/vial-armed-x86_64.AppImage, vial-armed_amd64.deb
 ```
 
 Releases are built by GitHub Actions: pushing a `v*` tag builds Linux, Windows and macOS and attaches them to a release.

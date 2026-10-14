@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
             if theme_group.checkedAction() is None:
                 theme_group.actions()[0].setChecked(True)
 
-        about_vial_act = QAction(tr("MenuAbout", "About Vial..."), self)
+        about_vial_act = QAction(tr("MenuAbout", "About vial-armed..."), self)
         about_vial_act.triggered.connect(self.about_vial)
         self.about_keyboard_act = QAction("", self)
         self.about_keyboard_act.triggered.connect(self.about_keyboard)
@@ -590,10 +590,10 @@ class MainWindow(QMainWindow):
         self.current_tab = new_tab
 
     def about_vial(self):
-        title = "About Vial"
-        text = 'Vial {}<br><br>Python {}<br>Qt {}<br><br>' \
+        title = "About vial-armed"
+        text = 'vial-armed {}<br>based on <a href="https://get.vial.today/">Vial</a><br><br>Python {}<br>Qt {}<br><br>' \
                'Licensed under the terms of the<br>GNU General Public License (version 2 or later)<br><br>' \
-               '<a href="https://get.vial.today/">https://get.vial.today/</a>' \
+               '<a href="https://github.com/backflipinc/vial-gui-armed">https://github.com/backflipinc/vial-gui-armed</a>' \
                .format(qApp.applicationVersion(),
                        platform.python_version(), QT_VERSION_STR)
 

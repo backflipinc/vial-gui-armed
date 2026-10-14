@@ -8,6 +8,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set version
+      run: python3 util/set_version.py
 
     - name: Build
       run: ./util/linux-builder/build-in-docker.sh
@@ -15,7 +20,9 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: vial-linux
-        path: util/linux-builder/output/Vial-x86_64.AppImage
+        path: |
+          util/linux-builder/output/vial-armed-x86_64.AppImage
+          util/linux-builder/output/vial-armed_amd64.deb
 
   build-mac:
     runs-on: macos-15
@@ -25,6 +32,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Get Python
       run: curl https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-macosx${MACOSX_DEPLOYMENT_TARGET}.pkg -o "python.pkg"
@@ -45,8 +54,9 @@ jobs:
     - name: Build
       run: |
         source venv/bin/activate
+        python util/set_version.py
         fbs freeze
-        hdiutil create -volname Vial -srcfolder "target/Vial.app" -ov -format UDZO vial-mac.dmg
+        hdiutil create -volname vial-armed -srcfolder "target/vial-armed.app" -ov -format UDZO vial-mac.dmg
 
     - uses: actions/upload-artifact@v4
       with:
@@ -58,6 +68,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     - uses: actions/setup-python@v4
       with:
         python-version: '3.6.x'
@@ -94,8 +106,9 @@ jobs:
     - name: Build
       run: |
         . .\venv\Scripts\activate.ps1
+        python util/set_version.py
         fbs freeze
-        Compress-Archive -Path "target\Vial" -DestinationPath vial-win.zip
+        Compress-Archive -Path "target\vial-armed" -DestinationPath vial-win.zip
 
     - uses: actions/upload-artifact@v4
       with:
@@ -111,7 +124,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: vial-win-installer
-        path: target\VialSetup.exe
+        path: target\vial-armedSetup.exe
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -127,11 +140,13 @@ jobs:
 
     - name: Name the files
       run: |
+        V=${GITHUB_REF_NAME#v}
         mkdir out
-        mv dist/vial-linux/Vial-x86_64.AppImage out/Vial-Armed-x86_64.AppImage
-        mv dist/vial-mac/vial-mac.dmg out/Vial-Armed-mac.dmg
-        mv dist/vial-win/vial-win.zip out/Vial-Armed-win.zip
-        mv dist/vial-win-installer/VialSetup.exe out/Vial-Armed-setup.exe
+        mv dist/vial-linux/vial-armed-x86_64.AppImage out/vial-armed-$V-x86_64.AppImage
+        mv dist/vial-linux/vial-armed_amd64.deb out/vial-armed_${V}_amd64.deb
+        mv dist/vial-mac/vial-mac.dmg out/vial-armed-$V-mac.dmg
+        mv dist/vial-win/vial-win.zip out/vial-armed-$V-win.zip
+        mv dist/vial-win-installer/vial-armedSetup.exe out/vial-armed-$V-setup.exe
         ls -l out
 
     - uses: softprops/action-gh-release@v2

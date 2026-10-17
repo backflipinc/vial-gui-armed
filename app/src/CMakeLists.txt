@@ -35,8 +35,12 @@ add_library(vialarmed_core STATIC
     model/qmksettings.h
     model/hud.cpp
     model/hud.h
+    model/theme.cpp
+    model/theme.h
     model/kle.cpp
     model/kle.h
+    render/lighting.cpp
+    render/lighting.h
     render/hudrender.cpp
     render/hudrender.h
     protocol/armed.cpp

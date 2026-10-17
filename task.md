@@ -9,11 +9,12 @@
 - [x] CI: сборка + тесты на Linux / Windows / macOS (`.github/workflows/app.yml`) — Windows/macOS не проверены до пуша
 
 ## 2. Транспорт и протоколы
-- [ ] `Transport` (интерфейс) + `HidTransport` (hidapi, поток, приоритеты, логика донгла)
-- [ ] Обнаружение устройств + hotplug
-- [ ] `VialProtocol`
-- [ ] `ArmedProtocol`
-- [ ] Загрузчик Vial
+- [x] `RawHid` + `Link` (ретраи USB/донгла 1:1) + `Session` (поток, приоритеты, склейка по ключу)
+- [x] Обнаружение устройств + hotplug (udev на Linux, опрос 2 с на Windows/macOS)
+- [x] `vial::` протокол
+- [x] `armed::` протокол + общий с Python кэш списков
+- [x] Загрузчик Vial (`vibl::`)
+- [x] Тесты: link, session, vial, armed (пакеты HUD побайтно = Python); `hwprobe` на железе
 
 ## 3. Модели данных
 - [ ] Генератор таблиц кейкодов из Python

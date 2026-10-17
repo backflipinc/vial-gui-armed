@@ -19,6 +19,12 @@ else()
     set(VIAL_ARMED_HIDAPI hidapi::hidapi)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(UDEV IMPORTED_TARGET libudev)
+    set(VIAL_ARMED_UDEV_FOUND ${UDEV_FOUND})
+endif()
+
 find_package(LibLZMA QUIET)
 if(LibLZMA_FOUND)
     set(VIAL_ARMED_LZMA LibLZMA::LibLZMA)

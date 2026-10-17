@@ -3,18 +3,42 @@ configure_file(core/version.h.in ${CMAKE_CURRENT_BINARY_DIR}/generated/core/vers
 add_library(vialarmed_core STATIC
     core/appinfo.cpp
     core/appinfo.h
+    core/bytes.h
+    core/lzma.cpp
+    core/lzma.h
+    core/paths.h
+    hid/devices.cpp
+    hid/devices.h
+    hid/link.cpp
+    hid/link.h
+    hid/monitor.cpp
+    hid/monitor.h
+    hid/rawhid.cpp
+    hid/rawhid.h
+    hid/session.cpp
+    hid/session.h
+    protocol/armed.cpp
+    protocol/armed.h
+    protocol/vial.cpp
+    protocol/vial.h
+    protocol/vibl.cpp
+    protocol/vibl.h
 )
 target_include_directories(vialarmed_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}/generated)
-target_link_libraries(vialarmed_core PUBLIC Qt6::Core Qt6::Gui ${VIAL_ARMED_HIDAPI} ${VIAL_ARMED_LZMA})
+target_link_libraries(vialarmed_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent ${VIAL_ARMED_HIDAPI} ${VIAL_ARMED_LZMA})
+if(VIAL_ARMED_UDEV_FOUND)
+    target_compile_definitions(vialarmed_core PRIVATE VIAL_ARMED_UDEV)
+    target_link_libraries(vialarmed_core PRIVATE PkgConfig::UDEV)
+endif()
 
 qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     main.cpp
     ui/mainwindow.cpp
     ui/mainwindow.h
 )
-target_link_libraries(vial-armed PRIVATE vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network Qt6::Concurrent)
+target_link_libraries(vial-armed PRIVATE vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network)
 
 qt_add_resources(vial-armed resources
     PREFIX "/"

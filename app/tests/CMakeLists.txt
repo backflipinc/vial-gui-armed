@@ -8,3 +8,10 @@ function(vial_armed_test name)
 endfunction()
 
 vial_armed_test(tst_appinfo)
+vial_armed_test(tst_link)
+vial_armed_test(tst_session)
+vial_armed_test(tst_vial)
+vial_armed_test(tst_armed)
+
+qt_add_executable(hwprobe hwprobe.cpp)
+target_link_libraries(hwprobe PRIVATE vialarmed_core)

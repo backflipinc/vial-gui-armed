@@ -30,7 +30,8 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationDomain("vial.today");
     QApplication::setApplicationVersion(appinfo::version());
     QApplication::setWindowIcon(QIcon(":/icons/icon.svg"));
-    QGuiApplication::setDesktopFileName(appinfo::kAppName);
+    // the Wayland app id: the desktop entry's name, so docks show its icon
+    QGuiApplication::setDesktopFileName(QStringLiteral("io.github.backflipinc.vial_armed"));
 
     switch (appinfo::modeFromArgs(QApplication::arguments())) {
     case appinfo::Mode::LinuxRecorder:

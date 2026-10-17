@@ -133,24 +133,8 @@ set(VIAL_ARMED_PKG ${CMAKE_CURRENT_SOURCE_DIR}/../packaging)
 if(WIN32)
     set(app_icon ${VIAL_ARMED_PKG}/windows/vial-armed.rc)
 elseif(APPLE)
-    # an .icns from the PNGs, with iconutil
-    set(iconset ${CMAKE_CURRENT_BINARY_DIR}/vial-armed.iconset)
-    set(app_icon ${CMAKE_CURRENT_BINARY_DIR}/vial-armed.icns)
-    set(icons ${VIAL_ARMED_RES}/icons)
-    add_custom_command(OUTPUT ${app_icon}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${iconset}
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/16.png ${iconset}/icon_16x16.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/32.png ${iconset}/icon_16x16@2x.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/32.png ${iconset}/icon_32x32.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/64.png ${iconset}/icon_32x32@2x.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/128.png ${iconset}/icon_128x128.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/256.png ${iconset}/icon_128x128@2x.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/256.png ${iconset}/icon_256x256.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/512.png ${iconset}/icon_256x256@2x.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/512.png ${iconset}/icon_512x512.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/1024.png ${iconset}/icon_512x512@2x.png
-        COMMAND iconutil -c icns ${iconset} -o ${app_icon}
-        VERBATIM)
+    # made from icons/mac/*.png ahead of time: iconutil failed on the CI runner
+    set(app_icon ${VIAL_ARMED_RES}/icons/vial-armed.icns)
     set_source_files_properties(${app_icon} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 endif()
 qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE main.cpp ${app_icon})
@@ -186,10 +170,15 @@ set_target_properties(vial-armed PROPERTIES
 install(TARGETS vial-armed BUNDLE DESTINATION . RUNTIME DESTINATION bin)
 if(UNIX AND NOT APPLE)
     include(GNUInstallDirs)
-    install(FILES ${VIAL_ARMED_PKG}/linux/vial-armed.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES ${VIAL_ARMED_PKG}/linux/io.github.backflipinc.vial_armed.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     install(FILES ${VIAL_ARMED_RES}/icons/icon.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
             RENAME vial-armed.svg)
     install(FILES ${VIAL_ARMED_RES}/icons/256.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
             RENAME vial-armed.png)
     install(FILES ${VIAL_ARMED_PKG}/linux/70-vial-armed.rules DESTINATION lib/udev/rules.d)
+    string(TIMESTAMP VIAL_ARMED_DATE "%Y-%m-%d" UTC)
+    # .appdata.xml: the name appimagetool looks for (AppStream takes either)
+    set(metainfo ${CMAKE_CURRENT_BINARY_DIR}/io.github.backflipinc.vial_armed.appdata.xml)
+    configure_file(${VIAL_ARMED_PKG}/linux/io.github.backflipinc.vial_armed.metainfo.xml.in ${metainfo} @ONLY)
+    install(FILES ${metainfo} DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
 endif()

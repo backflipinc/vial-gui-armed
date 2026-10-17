@@ -22,6 +22,8 @@ fetch https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251
     c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d linuxdeploy-x86_64.AppImage
 fetch https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage \
     15106be885c1c48a021198e7e1e9a48ce9d02a86dd0a1848f00bdbf3c1c92724 linuxdeploy-plugin-qt-x86_64.AppImage
+fetch https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage \
+    ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0 appimagetool-x86_64.AppImage
 
 # ---- AppImage
 
@@ -36,9 +38,9 @@ export QMAKE=${QMAKE:-$(command -v qmake6 || command -v qmake)}
 export APPIMAGE_EXTRACT_AND_RUN=1 # no FUSE in containers
 # the strip bundled with linuxdeploy predates newer toolchains' sections
 export NO_STRIP=1
-export LDAI_OUTPUT=$OUT/vial-armed-$VERSION-x86_64.AppImage
+APPIMAGE=vial-armed-$VERSION-x86_64.AppImage
 linuxdeploy-x86_64.AppImage --appdir "$APPDIR" \
-    --desktop-file "$APPDIR/usr/share/applications/vial-armed.desktop" \
+    --desktop-file "$APPDIR/usr/share/applications/io.github.backflipinc.vial_armed.desktop" \
     --icon-file "$APPDIR/usr/share/icons/hicolor/256x256/apps/vial-armed.png" \
     --plugin qt
 # plugins the app never uses pull in Qt Quick, Qt PDF and image codecs: drop them, then every library
@@ -60,7 +62,17 @@ done
 rm -f "$keep"
 # AppRun starts the binary through a symlink in the AppDir root, and Qt looks for qt.conf next to that
 printf '[Paths]\nPrefix = usr\nPlugins = plugins\n' > "$APPDIR/qt.conf"
-linuxdeploy-x86_64.AppImage --appdir "$APPDIR" --output appimage
+# AppImage managers read the version from the desktop entry, and some extract the root files with tools that
+# don't follow symlinks: real files there
+sed -i "/^\[Desktop Entry\]/a X-AppImage-Version=$VERSION" "$APPDIR/usr/share/applications/io.github.backflipinc.vial_armed.desktop"
+for f in io.github.backflipinc.vial_armed.desktop vial-armed.svg; do
+    cp --remove-destination "$(readlink -f "$APPDIR/$f")" "$APPDIR/$f"
+done
+cp --remove-destination "$APPDIR/usr/share/icons/hicolor/256x256/apps/vial-armed.png" "$APPDIR/.DirIcon"
+# appimagetool, not linuxdeploy's output plugin, which puts the symlinks back
+# AppImage managers find new releases through the update information and the .zsync (needs zsyncmake)
+(cd "$OUT" && ARCH=x86_64 appimagetool-x86_64.AppImage \
+    -u "gh-releases-zsync|backflipinc|vial-gui-armed|latest|vial-armed-*-x86_64.AppImage.zsync" "$APPDIR" "$APPIMAGE")
 
 # ---- .deb
 
@@ -68,7 +80,9 @@ PKG=$OUT/deb
 rm -rf "$PKG"
 mkdir -p "$PKG/opt/vial-armed" "$PKG/usr/bin" "$PKG/usr/share" "$PKG/usr/lib/udev/rules.d" "$PKG/DEBIAN"
 cp -a "$APPDIR/usr" "$PKG/opt/vial-armed/"
-mv "$PKG/opt/vial-armed/usr/share/applications" "$PKG/opt/vial-armed/usr/share/icons" "$PKG/usr/share/"
+mv "$PKG/opt/vial-armed/usr/share/applications" "$PKG/opt/vial-armed/usr/share/icons" \
+   "$PKG/opt/vial-armed/usr/share/metainfo" "$PKG/usr/share/"
+sed -i '/^X-AppImage-/d' "$PKG/usr/share/applications/io.github.backflipinc.vial_armed.desktop"
 mv "$PKG/opt/vial-armed/usr/lib/udev/rules.d/"* "$PKG/usr/lib/udev/rules.d/"
 rm -rf "$PKG/opt/vial-armed/usr/lib/udev"
 # not a symlink: Qt looks for qt.conf next to the path it was started by
@@ -111,4 +125,4 @@ else
     (cd "$T" && ar rc "$DEB" debian-binary control.tar.xz data.tar.xz)
     rm -rf "$T"
 fi
-ls -l "$LDAI_OUTPUT" "$DEB"
+ls -l "$OUT/$APPIMAGE"* "$DEB"

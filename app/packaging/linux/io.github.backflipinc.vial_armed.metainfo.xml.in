@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.backflipinc.vial_armed</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <name>Vial Armed</name>
+  <summary>Configure Vial and qmk-armed keyboards</summary>
+  <developer id="io.github.backflipinc">
+    <name>backflipinc</name>
+  </developer>
+  <description>
+    <p>
+      Vial Armed edits the keymap, macros, tap dance, combos and QMK settings of Vial keyboards. On keyboards running
+      qmk-armed it also sets every lighting effect with a live preview, lighting themes built from layers, the light
+      bar, auto-sleep, the clock, the screen animation and a HUD you lay out yourself and feed with your computer's
+      metrics.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.backflipinc.vial_armed.desktop</launchable>
+  <url type="homepage">https://github.com/backflipinc/vial-gui-armed</url>
+  <url type="bugtracker">https://github.com/backflipinc/vial-gui-armed/issues</url>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>keyboard</keyword>
+    <keyword>vial</keyword>
+    <keyword>qmk</keyword>
+  </keywords>
+  <provides>
+    <binary>vial-armed</binary>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VIAL_ARMED_VERSION@" date="@VIAL_ARMED_DATE@"/>
+  </releases>
+</component>

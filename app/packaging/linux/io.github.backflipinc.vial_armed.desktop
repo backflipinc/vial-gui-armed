@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Vial Armed
+GenericName=Keyboard Configurator
+Comment=Configure Vial and qmk-armed keyboards: keymap, macros, lighting, themes and the keyboard's screen
+Exec=vial-armed
+Icon=vial-armed
+Terminal=false
+Categories=Utility;
+Keywords=keyboard;keymap;vial;qmk;via;macro;rgb;
+StartupWMClass=vial-armed
+StartupNotify=true

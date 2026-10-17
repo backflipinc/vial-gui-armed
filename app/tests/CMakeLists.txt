@@ -18,6 +18,7 @@ vial_armed_test(tst_definition)
 vial_armed_test(tst_macro)
 vial_armed_test(tst_hud)
 vial_armed_test(tst_lighting)
+vial_armed_test(tst_screenmedia)
 
 qt_add_executable(hwprobe hwprobe.cpp)
 target_link_libraries(hwprobe PRIVATE vialarmed_core)

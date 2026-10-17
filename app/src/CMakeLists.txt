@@ -35,6 +35,8 @@ add_library(vialarmed_core STATIC
     model/qmksettings.h
     model/hud.cpp
     model/hud.h
+    model/screenmedia.cpp
+    model/screenmedia.h
     model/theme.cpp
     model/theme.h
     model/kle.cpp

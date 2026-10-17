@@ -3,6 +3,7 @@
 #include "pages/armeddevice.h"
 #include "pages/armedlighting.h"
 #include "pages/armedscreen.h"
+#include "pages/armedthemes.h"
 #include "pages/entrypages.h"
 #include "pages/keymappage.h"
 #include "pages/layoutpage.h"
@@ -54,7 +55,8 @@ QList<NavEntry> navEntries()
         {"Macros", [](const Controller &c) { return c.keyboard() && c.keyboard()->macroInfo.count > 0; },
          {{"Macros", [](Controller *c) { return new MacroPage(c); }}}},
         {"Lighting", [](const Controller &c) { return armedHas(c, F_RGB_MATRIX); },
-         {{"Effects", [](Controller *c) { return new ArmedLightingPage(c); }}, pending("Theme editor")}},
+         {{"Effects", [](Controller *c) { return new ArmedLightingPage(c); }},
+          {"Theme editor", [](Controller *c) { return new ThemeEditorPage(c); }}}},
         {"Lighting", [](const Controller &c) {
              const KeyboardState *kb = c.keyboard();
              return kb && ((kb->lighting == "vialrgb" && !armedHas(c, F_RGB_MATRIX)) || kb->lighting.startsWith("qmk_"));

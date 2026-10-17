@@ -72,11 +72,14 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *e) override;
     bool event(QEvent *e) override;
     void changeEvent(QEvent *e) override;
+    // key index and whether the inner (masked) part was hit, at a widget position
+    std::pair<int, bool> hit(const QPointF &pos) const;
+    // paints in the key's own coordinates (rotation included)
+    void transformTo(QPainter &qp, const Key &k) const;
 
 private:
     void place(Key &k, double unit, double shiftX, double shiftY) const;
     QPolygonF mapped(const Key &k, const QRectF &r) const;
-    std::pair<int, bool> hit(const QPointF &pos) const;
     QFont fitted(const QFont &base, const QString &text, double width) const;
 
     QList<Key> all_;     // every key with its layout option

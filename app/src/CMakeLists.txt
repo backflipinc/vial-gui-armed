@@ -75,6 +75,10 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     pages/armeddevice.h
     pages/armedscreen.cpp
     pages/armedscreen.h
+    pages/armedthemes.cpp
+    pages/armedthemes.h
+    ui/widgets/themecontrols.cpp
+    ui/widgets/themecontrols.h
     pages/armedlighting.cpp
     pages/armedlighting.h
     ui/widgets/armedcontrols.cpp

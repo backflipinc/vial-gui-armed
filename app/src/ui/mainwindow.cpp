@@ -460,10 +460,16 @@ void MainWindow::rebuildNav()
     int row = titles.indexOf(was);
     // development aid, with VIAL_ARMED_SCREENSHOT: open this page first
     static QString wanted = qEnvironmentVariable("VIAL_ARMED_PAGE");
-    if (!wanted.isEmpty() && titles.contains(wanted, Qt::CaseInsensitive)) {
+    const QString wantedEntry = wanted.section(QLatin1Char('/'), 0, 0);
+    if (!wanted.isEmpty() && titles.contains(wantedEntry, Qt::CaseInsensitive)) {
         for (int i = 0; i < titles.size(); ++i)
-            if (titles[i].compare(wanted, Qt::CaseInsensitive) == 0)
+            if (titles[i].compare(wantedEntry, Qt::CaseInsensitive) == 0)
                 row = i;
+        const QString part = wanted.section(QLatin1Char('/'), 1);
+        const auto &parts = entries_[visible_[row]].parts;
+        for (int p = 0; p < parts.size(); ++p)
+            if (!part.isEmpty() && parts[p].title.compare(part, Qt::CaseInsensitive) == 0)
+                partOf_[visible_[row]] = p;
         wanted.clear();
     }
     if (row < 0 && !titles.isEmpty())

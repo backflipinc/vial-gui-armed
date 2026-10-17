@@ -326,6 +326,15 @@ QFont KeyboardView::fitted(const QFont &base, const QString &text, double width)
     return f;
 }
 
+void KeyboardView::transformTo(QPainter &qp, const Key &k) const
+{
+    qp.scale(scale_, scale_);
+    qp.translate(k.shiftX, k.shiftY);
+    qp.translate(k.rotX, k.rotY);
+    qp.rotate(k.def.geo.rotationAngle);
+    qp.translate(-k.rotX, -k.rotY);
+}
+
 void KeyboardView::paintEvent(QPaintEvent *)
 {
     using namespace ui::theme;
@@ -345,11 +354,7 @@ void KeyboardView::paintEvent(QPaintEvent *)
     for (int i = 0; i < visible_.size(); ++i) {
         const Key &k = visible_[i];
         qp.save();
-        qp.scale(scale_, scale_);
-        qp.translate(k.shiftX, k.shiftY);
-        qp.translate(k.rotX, k.rotY);
-        qp.rotate(k.def.geo.rotationAngle);
-        qp.translate(-k.rotX, -k.rotY);
+        transformTo(qp, k);
 
         const bool active = k.active || (i == active_ && !activeMask_);
         if (k.glow) {

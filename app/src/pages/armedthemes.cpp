@@ -172,7 +172,8 @@ ThemeEditorPage::ThemeEditorPage(Controller *ctl)
     , centerBtn_(new QPushButton(tr("PICK THE POINT")))
     , solo_(new QCheckBox(tr("SOLO LAYER")))
     , caps_(new QCheckBox(tr("CAPS")))
-    , fn_(new QCheckBox(tr("FN")))
+    , previewLayer_(new QComboBox)
+    , keysMode_(new Segmented)
     , radial_(new QCheckBox(tr("FROM A POINT")))
     , mirror_(new QCheckBox)
     , kb_(new ThemeKeyboard(this))
@@ -233,20 +234,29 @@ ThemeEditorPage::ThemeEditorPage(Controller *ctl)
     kbHead->addWidget(keysHint_, 1);
     solo_->setToolTip(tr("Preview only the selected layer"));
     caps_->setToolTip(tr("Preview with Caps Lock on"));
-    fn_->setToolTip(tr("Preview with Fn (layer 1) held"));
-    for (QCheckBox *c : {solo_, caps_, fn_})
+    previewLayer_->setToolTip(tr("Preview with this keymap layer on"));
+    for (QCheckBox *c : {solo_, caps_})
         kbHead->addWidget(c);
+    kbHead->addWidget(previewLayer_);
     kbFrame->box()->addLayout(kbHead);
     auto *fitted = new FittedKeyboard(kb_);
     fitted->setPreferredScale(1.25);
     kbFrame->box()->addWidget(fitted, 1);
+    auto *keysRow = new QHBoxLayout;
+    keysRow->setSpacing(6);
+    auto *keysLabel = keyLabel(tr("KEYMAP LAYER"));
+    keysLabel->setFixedWidth(110);
+    keysRow->addWidget(keysLabel);
+    keysRow->addWidget(keysMode_);
+    keysRow->addStretch(1);
+    kbFrame->box()->addLayout(keysRow);
+    rowKeys_ = Row{{keysLabel, keysMode_}};
     auto *tools = new QHBoxLayout;
     tools->setSpacing(6);
+    tools_->setFixedWidth(110);
     tools->addWidget(tools_);
-    for (const QString &g : kGroups + QStringList{"NONE", "INVERT"}) {
+    for (const QString &g : kGroups.mid(1) + QStringList{"NONE", "INVERT"}) {
         auto *b = new QPushButton(g);
-        if (g == "FN LAYER")
-            b->setToolTip(tr("Keys bound on the Fn layer and the Fn key itself; pair it with SHOW: FN HELD"));
         connect(b, &QPushButton::clicked, this, [this, g] { onGroup(g); });
         tools->addWidget(b);
         groupButtons_.append(b);
@@ -279,6 +289,8 @@ ThemeEditorPage::ThemeEditorPage(Controller *ctl)
     grid->setVerticalSpacing(8);
     for (const auto &t : types())
         type_->addItem(t.name, t.id);
+    keysMode_->setToolTip(tr("The keys this layer lights. An FN layer's keys are what is bound on that keymap layer "
+                             "plus the keys that bring it up; the keyboard follows remaps by itself"));
     rowType_ = addRow(grid, 0, keyLabel(tr("TYPE")), type_);
     auto *colors = new QHBoxLayout;
     swapBtn_->setToolTip(tr("Swap the colours"));
@@ -400,6 +412,21 @@ ThemeEditorPage::ThemeEditorPage(Controller *ctl)
     connect(param_, &QSlider::valueChanged, this, [this](int v) { edit([v](Layer &l) { l.param = v; }); });
     connect(opacity_, &QSlider::valueChanged, this, [this](int v) { edit([v](Layer &l) { l.opacity = v; }); });
     connect(blend_, &Segmented::changed, this, [this](int i) { edit([i](Layer &l) { l.blend = i; }); });
+    connect(keysMode_, &Segmented::changed, this, [this](int i) {
+        Layer *l = layer();
+        if (updating_ || !l || i < 0 || i >= keysModes_.size() || keysModes_[i] == l->keys)
+            return;
+        // the mask keeps what the layer shows: firmware before 1.9.0 and CUSTOM start from it
+        l->mask = covered(*l);
+        l->keys = keysModes_[i];
+        l->mask = covered(*l);
+        changed(true, true);
+    });
+    connect(previewLayer_, &QComboBox::currentIndexChanged, this, [this] { kb_->update(); });
+    connect(ctl, &Controller::keymapChanged, this, [this] {
+        layerKeys_.clear();
+        refreshKeys();
+    });
     connect(cond_, &QComboBox::currentIndexChanged, this, [this](int i) {
         if (!updating_ && i >= 0)
             edit([c = cond_->itemData(i).toInt()](Layer &l) { l.cond = c; });
@@ -511,11 +538,20 @@ void ThemeEditorPage::keyboardChanged()
     cond_->addItem(tr("ALWAYS"), int(C_ALWAYS));
     cond_->addItem(tr("CAPS LOCK ON"), int(C_CAPS));
     cond_->addItem(tr("CAPS LOCK OFF"), int(C_NO_CAPS));
-    cond_->addItem(tr("FN HELD"), C_LAYER | 1);
-    cond_->addItem(tr("FN NOT HELD"), C_NOT_LAYER | 1);
     cond_->addItem(tr("BASE LAYER ONLY"), int(C_LAYER));
-    for (int n = 2; n < std::min(16, kb->layers); ++n)
-        cond_->addItem(tr("LAYER %1 ON").arg(n), C_LAYER | n);
+    for (int n = 1; n < std::min(16, kb->layers); ++n)
+        cond_->addItem(tr("FN%1 LAYER").arg(n), C_LAYER | n);
+    QStringList modes{tr("ALL KEYS"), tr("CUSTOM")};
+    keysModes_ = {K_ALL, K_CUSTOM};
+    previewLayer_->clear();
+    previewLayer_->addItem(tr("BASE"), 0);
+    for (int n = 1; n < std::min(16, kb->layers); ++n) {
+        modes << tr("FN%1").arg(n);
+        keysModes_ << n;
+        previewLayer_->addItem(tr("FN%1").arg(n), n);
+    }
+    keysMode_->setLabels(modes);
+    layerKeys_.clear();
     updating_ = false;
     refreshAll();
 }
@@ -666,6 +702,7 @@ void ThemeEditorPage::onType(int index)
     fresh.blend = l->blend;
     fresh.opacity = l->opacity;
     fresh.cond = l->cond;
+    fresh.keys = tid == PAINT ? int(K_CUSTOM) : l->keys;
     fresh.dir = l->dir;
     fresh.flags |= l->flags & F_HIDDEN;
     *l = fresh;
@@ -680,7 +717,10 @@ void ThemeEditorPage::onAdd(int type)
     if (type != PAINT)
         for (int i = 0; i < nLeds(); ++i)
             mask.insert(i);
-    theme().layers.insert(cur_ + 1, Layer::make(type, mask));
+    Layer fresh = Layer::make(type, mask);
+    if (type != PAINT)
+        fresh.keys = K_ALL;
+    theme().layers.insert(cur_ + 1, fresh);
     ++cur_;
     changed(true, true);
 }
@@ -721,6 +761,7 @@ void ThemeEditorPage::onGroup(const QString &g)
     Layer *l = layer();
     if (!l)
         return;
+    makeCustom(*l);
     QSet<int> everything;
     for (int i = 0; i < nLeds(); ++i)
         everything.insert(i);
@@ -752,7 +793,7 @@ void ThemeEditorPage::onPreset(int index)
         return;
     const KeyboardState *kb = ctl->keyboard();
     const QString name = theme().name;
-    Theme t = buildPreset(index, kb->armed->leds, [kb](int l, int r, int c) { return kb->key(l, r, c); });
+    Theme t = buildPreset(index, kb->armed->leds, [kb](int l, int r, int c) { return kb->key(l, r, c); }, kb->layers);
     if (presetNames().value(index) == "BLANK")
         t.name = name;
     theme() = t;
@@ -911,6 +952,7 @@ void ThemeEditorPage::keyDown(int key, Qt::MouseButton button, Qt::KeyboardModif
         }
         return;
     }
+    makeCustom(*l);
     if (button == Qt::RightButton)
         dragAction_ = Drag::Remove;
     else if (l->type == PAINT)
@@ -943,10 +985,37 @@ QSet<int> ThemeEditorPage::coveredKeys() const
     const Layer *l = self->layer();
     if (!l || l->type == PAINT)
         return out;
-    for (int i : l->mask)
+    for (int i : covered(*l))
         if (i < ledKeys_.size() && ledKeys_[i] >= 0)
             out.insert(ledKeys_[i]);
     return out;
+}
+
+QSet<int> ThemeEditorPage::layerKeys(int n) const
+{
+    auto it = layerKeys_.constFind(n);
+    if (it != layerKeys_.constEnd())
+        return *it;
+    const KeyboardState *kb = ctl->keyboard();
+    QSet<int> keys;
+    if (kb && kb->armed)
+        keys = theme::layerKeys(kb->armed->leds, [kb](int l, int r, int c) { return kb->key(l, r, c); }, kb->layers, n);
+    layerKeys_.insert(n, keys);
+    return keys;
+}
+
+QSet<int> ThemeEditorPage::covered(const Layer &l) const
+{
+    return theme::coverage(l, nLeds(), [this](int n) { return layerKeys(n); });
+}
+
+// editing single keys turns ALL KEYS or an FN layer into CUSTOM, starting from the keys it showed
+void ThemeEditorPage::makeCustom(Layer &l) const
+{
+    if (l.keys == K_CUSTOM || l.type == PAINT)
+        return;
+    l.mask = covered(l);
+    l.keys = K_CUSTOM;
 }
 
 std::optional<QPointF> ThemeEditorPage::centerPoint() const
@@ -1075,7 +1144,7 @@ void ThemeEditorPage::refreshControls()
 {
     Layer *l = layer();
     empty_->setVisible(!l);
-    const QList<Row *> rows = {&rowType_, &rowColors_, &rowDir_, &rowSpeed_, &rowSize_, &rowParam_, &rowOpacity_,
+    const QList<Row *> rows = {&rowKeys_, &rowType_, &rowColors_, &rowDir_, &rowSpeed_, &rowSize_, &rowParam_, &rowOpacity_,
                                &rowBlend_, &rowCond_};
     if (!l) {
         hint_->clear();
@@ -1124,9 +1193,14 @@ void ThemeEditorPage::refreshControls()
     param_->setValue(l->type == REACTIVE && l->param == 255 ? 0 : l->param);
     opacity_->setValue(l->opacity);
     blend_->setCurrent(l->blend);
+    showRow(rowKeys_, l->type != PAINT);
+    keysMode_->setCurrent(int(keysModes_.indexOf(l->keys)));
     int idx = cond_->findData(l->cond);
     if (idx < 0) {
-        cond_->addItem(tr("CONDITION 0x%1").arg(l->cond, 2, 16, QLatin1Char('0')).toUpper(), l->cond);
+        const int n = l->cond & 0x0F;
+        cond_->addItem((l->cond & 0xF0) == C_NOT_LAYER ? (n ? tr("NOT FN%1 LAYER").arg(n) : tr("ANY FN LAYER"))
+                                                       : tr("CONDITION 0x%1").arg(l->cond, 2, 16, QLatin1Char('0')).toUpper(),
+                       l->cond);
         idx = cond_->count() - 1;
     }
     cond_->setCurrentIndex(idx);
@@ -1170,6 +1244,10 @@ void ThemeEditorPage::refreshKeys()
         keysHint_->clear();
     else if (l->type == PAINT)
         keysHint_->setText(tr("CLICK / DRAG TO PAINT · RIGHT-CLICK ERASES · CTRL+CLICK PICKS A KEY'S COLOUR"));
+    else if (l->keys == K_ALL)
+        keysHint_->setText(tr("◤ = THIS LAYER SHOWS THERE · ALL KEYS · CLICK / DRAG TO PICK KEYS BY HAND"));
+    else if (l->keys)
+        keysHint_->setText(tr("◤ = THIS LAYER SHOWS THERE · FN%1 LAYER, FOLLOWS REMAPS · CLICK / DRAG TO PICK KEYS BY HAND").arg(l->keys));
     else
         keysHint_->setText(tr("◤ = THIS LAYER SHOWS THERE · CLICK / DRAG TO CHANGE · RIGHT-DRAG REMOVES"));
     tools_->setText(l && l->type == PAINT ? tr("PAINT") : tr("KEYS"));
@@ -1229,7 +1307,9 @@ void ThemeEditorPage::tick()
         renderer_->hit(int(QRandomGenerator::global()->bounded(nLeds())), t);
     }
     renderer_->caps = caps_->isChecked();
-    renderer_->layersOn = fn_->isChecked() ? QSet<int>{1} : QSet<int>{};
+    const int on = previewLayer_->currentData().toInt();
+    renderer_->layersOn = on ? QSet<int>{on} : QSet<int>{};
+    renderer_->layerKeys = [this](int n) { return layerKeys(n); };
     const auto &io = *ctl->keyboard()->armed;
     const int val = ctl->armedValue(armed::V_VAL);
     const int v = val ? std::min(255, val * 255 / std::max(1, io.maxBrightness)) : 255;

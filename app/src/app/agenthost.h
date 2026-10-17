@@ -21,6 +21,8 @@ public:
     agent::HudAgent &agent() { return agent_; }
     bool feeding() const { return bool(agent_.send); }
     std::pair<QColor, QString> status() const;
+    // the HUD editor shows the agent's values even while it feeds nothing
+    void setPreviewing(bool on) { previewing_ = on; }
 
 signals:
     void changed();
@@ -37,6 +39,7 @@ private:
     QLockFile lock_;
     bool locked_ = false;
     bool hasHud_ = false;
+    bool previewing_ = false;
     int textLen_ = 160;
     int inflight_ = 0;
     quint64 serial_ = 0;

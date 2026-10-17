@@ -109,6 +109,9 @@ void AgentHost::attach()
 void AgentHost::tick()
 {
     const bool was = feeding();
+    // sampling (nvidia-smi, commands) costs CPU: only for the keyboard or the editor
+    if (!was && !previewing_)
+        return;
     agent_.tick();
     if (was && !feeding())
         emit changed();

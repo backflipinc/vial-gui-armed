@@ -305,6 +305,8 @@ QString layerSummary(const theme::Layer &l)
     QString name = t ? t->name : QStringLiteral("?");
     if (t && t->controls.contains("dir") && l.flag(theme::F_RADIAL))
         name += QStringLiteral(" ◎");
+    if (l.type != theme::PAINT && l.keys >= 1 && l.keys <= theme::K_LAYER_MAX)
+        name += QStringLiteral(" · FN%1").arg(l.keys);
     return name;
 }
 

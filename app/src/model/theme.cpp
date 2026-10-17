@@ -4,6 +4,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 
 #include <optional>
 
@@ -98,7 +99,8 @@ QByteArray Layer::pack(int nLeds) const
     out += char(param);
     out += char(cx);
     out += char(cy);
-    out.append(3, '\0');
+    out += char(keys);
+    out.append(2, '\0');
     QByteArray m((nLeds + 7) / 8, '\0');
     for (int i : mask)
         if (i >= 0 && i < nLeds)
@@ -123,6 +125,7 @@ Layer Layer::unpack(const QByteArray &d, int nLeds)
     l.param = u(14);
     l.cx = u(15);
     l.cy = u(16);
+    l.keys = u(17);
     for (int i = 0; i < nLeds; ++i)
         if (u(LAYER_HEAD + i / 8) & (1 << (i % 8)))
             l.mask.insert(i);
@@ -229,6 +232,7 @@ QByteArray Theme::toJson(const QList<armed::Led> &leds) const
             {"radial", l.flag(F_RADIAL)}, {"mirror", l.flag(F_MIRROR)}, {"reverse", l.flag(F_REVERSE)},
             {"hidden", l.hidden()}, {"a", hexColor(l.a)}, {"b", hexColor(l.b)},
             {"keys", QJsonArray::fromStringList(keys)},
+            {"keymap_layer", l.keys == K_ALL ? QJsonValue("all") : l.keys ? QJsonValue(l.keys) : QJsonValue("custom")},
         });
     }
     QJsonObject p;
@@ -283,6 +287,8 @@ std::variant<Theme, QString> Theme::fromJson(const QByteArray &json, const QList
         for (const auto &k : o.value("keys").toArray())
             if (names.contains(k.toString()))
                 l.mask.insert(names.value(k.toString()));
+        const QJsonValue km = o.value("keymap_layer");
+        l.keys = km == QJsonValue("all") ? K_ALL : km.isDouble() ? std::clamp(km.toInt(), 0, int(K_LAYER_MAX)) : K_CUSTOM;
         t.layers.append(l);
     }
     const QJsonObject paint = d.value("paint").toObject();
@@ -323,15 +329,11 @@ QMap<QString, QSet<int>> keyGroups(const QList<armed::Led> &leds, const KeymapFn
         return out;
     };
     QMap<QString, QSet<int>> g;
-    QSet<int> all, mods, fn;
+    QSet<int> all, mods;
     for (int i = 0; i < leds.size(); ++i) {
         all.insert(i);
         if (leds[i].modifier())
             mods.insert(i);
-        QString onFn = keymap(1, leds[i].row, leds[i].col);
-        if ((!onFn.isNull() && onFn != QLatin1String("KC_TRNS") && onFn != QLatin1String("KC_NO"))
-            || keymap(0, leds[i].row, leds[i].col) == QLatin1String("MO(1)"))
-            fn.insert(i);
     }
     g["ALL"] = all;
     g["LETTERS"] = byCode(letters);
@@ -340,8 +342,55 @@ QMap<QString, QSet<int>> keyGroups(const QList<armed::Led> &leds, const KeymapFn
     g["MODS"] = mods;
     g["ARROWS"] = byCode(arrows);
     g["WASD"] = byCode(wasd);
-    g["FN LAYER"] = fn;
     return g;
+}
+
+namespace {
+
+// quantum/armed/armed_theme.c brings_up(); FN_MO13 / FN_MO23 with tri-layer's default layers 1, 2, 3
+bool bringsUp(const QString &code, int n)
+{
+    static const QRegularExpression plain(QStringLiteral("^(?:MO|TG|TT|OSL|TO)\\((\\d+)\\)$"));
+    static const QRegularExpression held(QStringLiteral("^(?:LT|LM)(\\d+)\\("));
+    if (code == QLatin1String("FN_MO13"))
+        return n == 1 || n == 3;
+    if (code == QLatin1String("FN_MO23"))
+        return n == 2 || n == 3;
+    auto m = plain.match(code);
+    if (!m.hasMatch())
+        m = held.match(code);
+    return m.hasMatch() && m.captured(1).toInt() == n;
+}
+
+}
+
+QSet<int> layerKeys(const QList<armed::Led> &leds, const KeymapFn &keymap, int layers, int n)
+{
+    QSet<int> out;
+    if (n <= 0 || n >= layers)
+        return out;
+    for (int i = 0; i < leds.size(); ++i) {
+        const QString kc = keymap(n, leds[i].row, leds[i].col);
+        bool on = !kc.isNull() && kc != QLatin1String("KC_TRNS") && kc != QLatin1String("KC_NO");
+        for (int m = 0; !on && m < layers; ++m)
+            on = m != n && bringsUp(keymap(m, leds[i].row, leds[i].col), n);
+        if (on)
+            out.insert(i);
+    }
+    return out;
+}
+
+QSet<int> coverage(const Layer &l, int nLeds, const std::function<QSet<int>(int n)> &layerKeys)
+{
+    if (l.keys == K_ALL) {
+        QSet<int> all;
+        for (int i = 0; i < nLeds; ++i)
+            all.insert(i);
+        return all;
+    }
+    if (l.keys >= 1 && l.keys <= K_LAYER_MAX && layerKeys)
+        return layerKeys(l.keys);
+    return l.mask;
 }
 
 namespace {
@@ -376,7 +425,7 @@ const QList<QPair<QString, QList<PresetLayer>>> &presets()
                         {PULSE, "ALL", [](Layer &l) { l.a = {255, 0, 0}; l.b = {60, 0, 0}; l.speed = 90; l.cond = C_CAPS; }}}},
         {"FN MAP", {{GRADIENT, "ALL", [](Layer &l) { l.a = {0, 120, 255}; l.b = {0, 255, 160}; l.speed = 12; l.flags = F_MIRROR; }},
                     {SOLID, "ALL", [](Layer &l) { l.a = {0, 0, 0}; l.opacity = 220; l.cond = C_LAYER | 1; }},
-                    {PULSE, "FN LAYER", [](Layer &l) { l.a = {255, 170, 0}; l.b = {255, 255, 255}; l.speed = 60; l.cond = C_LAYER | 1; }}}},
+                    {PULSE, "FN1", [](Layer &l) { l.a = {255, 170, 0}; l.b = {255, 255, 255}; l.speed = 60; l.cond = C_LAYER | 1; }}}},
         {"BLANK", {}},
     };
     return p;
@@ -392,13 +441,22 @@ QStringList presetNames()
     return out;
 }
 
-Theme buildPreset(int index, const QList<armed::Led> &leds, const KeymapFn &keymap)
+Theme buildPreset(int index, const QList<armed::Led> &leds, const KeymapFn &keymap, int keymapLayers)
 {
     const auto &[name, layers] = presets()[index];
     auto groups = keyGroups(leds, keymap);
     Theme t = Theme::blank(name, int(leds.size()));
     for (const PresetLayer &pl : layers) {
-        Layer l = Layer::make(pl.type, groups.value(pl.keys, groups.value("ALL")));
+        Layer l;
+        if (pl.keys.startsWith(QLatin1String("FN"))) {
+            const int n = pl.keys.mid(2).toInt();
+            l = Layer::make(pl.type, layerKeys(leds, keymap, keymapLayers, n));
+            l.keys = n;
+        } else {
+            l = Layer::make(pl.type, groups.value(pl.keys, groups.value("ALL")));
+            if (pl.keys == QLatin1String("ALL"))
+                l.keys = K_ALL;
+        }
         pl.set(l);
         t.layers.append(l);
     }

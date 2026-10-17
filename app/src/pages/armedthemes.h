@@ -83,6 +83,9 @@ private:
     void refreshControls();
     void refreshValues();
     void refreshKeys();
+    QSet<int> layerKeys(int n) const;
+    QSet<int> covered(const theme::Layer &l) const;
+    void makeCustom(theme::Layer &l) const;
     QStringList slotLabels() const;
     Row addRow(QGridLayout *grid, int r, QWidget *label, QWidget *widget, QWidget *value = nullptr);
     Row addRow(QGridLayout *grid, int r, QWidget *label, QLayout *layout);
@@ -99,6 +102,8 @@ private:
     QList<int> ledKeys_;    // LED -> key index
     QHash<int, int> keyLed_; // key index -> LED
     QMap<QString, QSet<int>> groups_;
+    mutable QHash<int, QSet<int>> layerKeys_; // keymap layer -> LEDs, until the keymap changes
+    QList<int> keysModes_;                    // keysMode_ index -> theme::Layer::keys
     std::unique_ptr<lighting::ThemeRenderer> renderer_;
     QElapsedTimer clock_;
     qint64 lastDemo_ = 0;
@@ -112,7 +117,9 @@ private:
     QPushButton *undoBtn_, *redoBtn_, *saveBtn_, *revertBtn_, *addBtn_, *dupBtn_, *upBtn_, *downBtn_, *delBtn_,
         *swapBtn_, *centerBtn_;
     QList<QPushButton *> groupButtons_;
-    QCheckBox *solo_, *caps_, *fn_, *radial_, *mirror_;
+    QCheckBox *solo_, *caps_, *radial_, *mirror_;
+    QComboBox *previewLayer_;
+    Segmented *keysMode_;
     ThemeKeyboard *kb_;
     LayerList *layers_;
     BracketFrame *props_;
@@ -123,5 +130,5 @@ private:
     Segmented *radialWay_, *blend_;
     QSlider *speed_, *size_, *param_, *opacity_;
     QLabel *speedLabel_, *sizeLabel_, *paramLabel_, *speedVal_, *sizeVal_, *paramVal_, *opacityVal_;
-    Row rowType_, rowColors_, rowDir_, rowSpeed_, rowSize_, rowParam_, rowOpacity_, rowBlend_, rowCond_;
+    Row rowKeys_, rowType_, rowColors_, rowDir_, rowSpeed_, rowSize_, rowParam_, rowOpacity_, rowBlend_, rowCond_;
 };

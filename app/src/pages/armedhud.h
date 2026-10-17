@@ -69,6 +69,7 @@ class HudEditorPage : public Page {
 
 public:
     explicit HudEditorPage(Controller *ctl);
+    ~HudEditorPage() override;
     void keyboardChanged() override;
     void activate() override;
     void deactivate() override;

@@ -133,11 +133,48 @@ private slots:
     {
         auto keymap = [](int, int, int) { return QString(); };
         for (int i = 0; i < theme::presetNames().size(); ++i) {
-            theme::Theme t = theme::buildPreset(i, leds, keymap);
+            theme::Theme t = theme::buildPreset(i, leds, keymap, 4);
             auto back = theme::Theme::fromJson(t.toJson(leds), leds, 8);
             QVERIFY(std::holds_alternative<theme::Theme>(back));
             QCOMPARE(std::get<theme::Theme>(back).pack(int(leds.size()), 8), t.pack(int(leds.size()), 8));
         }
+    }
+
+    // the same rules as quantum/armed/armed_theme.c layer_keys()
+    void keymapLayerKeys()
+    {
+        const QList<armed::Led> six = {{0, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {0, 5}};
+        // layer 0: A, MO(1), LT2(KC_B), FN_MO13, TG(3), C; layer 1: X on key 0 only; layer 3: KC_TRNS everywhere
+        const QStringList base = {"KC_A", "MO(1)", "LT2(KC_B)", "FN_MO13", "TG(3)", "KC_C"};
+        auto keymap = [&](int l, int, int c) -> QString {
+            if (l == 0)
+                return base[c];
+            if (l == 1)
+                return c == 0 ? "KC_X" : "KC_TRNS";
+            if (l == 2)
+                return c == 5 ? "KC_NO" : "KC_TRNS";
+            return "KC_TRNS";
+        };
+        QCOMPARE(theme::layerKeys(six, keymap, 4, 1), (QSet<int>{0, 1, 3}));
+        QCOMPARE(theme::layerKeys(six, keymap, 4, 2), (QSet<int>{2}));
+        QCOMPARE(theme::layerKeys(six, keymap, 4, 3), (QSet<int>{3, 4}));
+        QVERIFY(theme::layerKeys(six, keymap, 4, 4).isEmpty());
+
+        theme::Layer l = theme::Layer::make(theme::SOLID, {5});
+        auto keys = [&](int n) { return theme::layerKeys(six, keymap, 4, n); };
+        QCOMPARE(theme::coverage(l, 6, keys), QSet<int>{5});
+        l.keys = theme::K_ALL;
+        QCOMPARE(theme::coverage(l, 6, keys).size(), 6);
+        l.keys = 2;
+        QCOMPARE(theme::coverage(l, 6, keys), QSet<int>{2});
+
+        // byte 17 of the layer, kept through the wire format and the export
+        QCOMPARE(quint8(l.pack(6)[17]), quint8(2));
+        QCOMPARE(theme::Layer::unpack(l.pack(6), 6).keys, 2);
+        theme::Theme t = theme::Theme::blank("T", 6);
+        t.layers = {l};
+        auto back = theme::Theme::fromJson(t.toJson(six), six, 8);
+        QCOMPARE(std::get<theme::Theme>(back).layers[0].keys, 2);
     }
 };
 

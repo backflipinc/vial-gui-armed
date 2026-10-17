@@ -26,6 +26,8 @@ enum Type : quint8 { NONE, SOLID, GRADIENT, RAINBOW, PULSE, WAVE, SPARKLE, REACT
 enum Blend : quint8 { NORMAL, ADD, MULTIPLY };
 enum Flag : quint8 { F_RADIAL = 0x01, F_MIRROR = 0x02, F_REVERSE = 0x04, F_HIDDEN = 0x80 };
 enum Cond : quint8 { C_ALWAYS = 0x00, C_CAPS = 0x01, C_NO_CAPS = 0x02, C_LAYER = 0x10, C_NOT_LAYER = 0x20 };
+// which keys a layer covers: its mask, every key, or the keys of keymap layer 1..15 (worked out by the keyboard)
+enum Keys : quint8 { K_CUSTOM = 0x00, K_ALL = 0x80, K_LAYER_MAX = 0x0F };
 
 using Rgb = std::array<quint8, 3>;
 
@@ -41,6 +43,7 @@ inline const QStringList kBlends = {"NORMAL", "ADD", "MULTIPLY"};
 
 struct Layer {
     int type = SOLID, blend = NORMAL, opacity = 255, speed = 0, dir = 0, size = 128, flags = 0, cond = C_ALWAYS;
+    int keys = K_CUSTOM;
     Rgb a{255, 170, 0}, b{0, 0, 0};
     int param = 255, cx = 112, cy = 32;
     QSet<int> mask; // LED indexes
@@ -75,10 +78,14 @@ QString keyName(const QList<armed::Led> &leds, int i);
 // keymap lookup: layer, row, col -> keycode name (null when the layout has no key there)
 using KeymapFn = std::function<QString(int layer, int row, int col)>;
 
-inline const QStringList kGroups = {"ALL", "LETTERS", "NUMBERS", "F-ROW", "MODS", "ARROWS", "WASD", "FN LAYER"};
+inline const QStringList kGroups = {"ALL", "LETTERS", "NUMBERS", "F-ROW", "MODS", "ARROWS", "WASD"};
 QMap<QString, QSet<int>> keyGroups(const QList<armed::Led> &leds, const KeymapFn &keymap);
+// the keys of keymap layer n, as qmk-armed counts them: bound there, or bringing that layer up from another one
+QSet<int> layerKeys(const QList<armed::Led> &leds, const KeymapFn &keymap, int layers, int n);
+// what a layer covers now: its mask, or every LED, or keymap layer n's keys
+QSet<int> coverage(const Layer &l, int nLeds, const std::function<QSet<int>(int n)> &layerKeys);
 
 QStringList presetNames();
-Theme buildPreset(int index, const QList<armed::Led> &leds, const KeymapFn &keymap);
+Theme buildPreset(int index, const QList<armed::Led> &leds, const KeymapFn &keymap, int keymapLayers);
 
 }

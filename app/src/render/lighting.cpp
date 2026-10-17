@@ -724,13 +724,16 @@ QList<Rgb> ThemeRenderer::frame(const theme::Theme &th, qint64 t, int v)
     for (const auto &l : th.layers)
         frames.append(l.type && !(l.flags & theme::F_HIDDEN) && condition(l.cond) ? std::optional(setup(l, t))
                                                                                  : std::nullopt);
+    QList<QSet<int>> covers;
+    for (const auto &l : th.layers)
+        covers.append(theme::coverage(l, int(leds_.size()), layerKeys));
     QList<Rgb> out;
     out.reserve(leds_.size());
     for (int i = 0; i < leds_.size(); ++i) {
         int o[3] = {0, 0, 0};
         for (int li = 0; li < th.layers.size(); ++li) {
             const auto &l = th.layers[li];
-            if (!frames[li] || !l.mask.contains(i))
+            if (!frames[li] || !covers[li].contains(i))
                 continue;
             auto [c, a] = color(th, li, l, *frames[li], i, leds_[i], t, steps);
             a = a * l.opacity / 255;

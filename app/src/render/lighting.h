@@ -82,6 +82,8 @@ public:
 
     bool caps = false;
     QSet<int> layersOn;
+    // LEDs of keymap layer n, for layers that follow the keymap (theme::Layer::keys); empty: the mask is used
+    std::function<QSet<int>(int n)> layerKeys;
 
     void hit(int idx, qint64 t);
     QList<Rgb> frame(const theme::Theme &th, qint64 t, int v = 255);

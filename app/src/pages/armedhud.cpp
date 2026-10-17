@@ -341,6 +341,12 @@ HudEditorPage::HudEditorPage(Controller *ctl)
     refreshAgent();
 }
 
+HudEditorPage::~HudEditorPage()
+{
+    if (active_)
+        host_->setPreviewing(false);
+}
+
 QWidget *HudEditorPage::buildLayoutView()
 {
     screenFrame_ = new BracketFrame(tr("SCREEN"), true);
@@ -866,6 +872,7 @@ void HudEditorPage::keyboardChanged()
 void HudEditorPage::activate()
 {
     active_ = true;
+    host_->setPreviewing(true);
     if (!valid())
         return;
     if (!loaded_) {
@@ -893,6 +900,7 @@ void HudEditorPage::activate()
 void HudEditorPage::deactivate()
 {
     active_ = false;
+    host_->setPreviewing(false);
     pollTimer_.stop();
     paintTimer_.stop();
     for (auto *sc : shortcuts_)

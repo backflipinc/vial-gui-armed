@@ -14,6 +14,8 @@ Controller::Controller(QObject *parent)
     : QObject(parent)
 {
     connect(&monitor_, &hid::DeviceMonitor::devicesChanged, this, &Controller::onDevices);
+    clockTimer_.setInterval(10 * 60 * 1000);
+    connect(&clockTimer_, &QTimer::timeout, this, &Controller::syncClock);
     monitor_.refresh();
 }
 
@@ -73,6 +75,8 @@ void Controller::close()
     bool had = keyboard_.has_value();
     keyboard_.reset();
     themes_.reset();
+    clockTimer_.stop();
+    clockStatus_.clear();
     session_.reset();
     current_.reset();
     unlocked_ = true;
@@ -125,6 +129,10 @@ void Controller::open(const hid::DeviceInfo &info)
         setState(State::Ready);
         emit keyboardChanged();
         refreshLock();
+        if (keyboard_->armed && keyboard_->armed->has(armed::F_CLOCK)) {
+            syncClock();
+            clockTimer_.start();
+        }
     });
 }
 
@@ -406,5 +414,38 @@ void Controller::loadThemes(std::function<void(bool)> done)
             t.list.append(theme::Theme::unpack(blob, t.info.leds, t.info.layers));
         themes_ = t;
         done(true);
+    });
+}
+
+void Controller::syncClock()
+{
+    if (!session_ || busy_)
+        return;
+    // the keyboard counts whole seconds: send the time right after a second ticks over
+    const int wait = 1000 - QTime::currentTime().msec();
+    QTimer::singleShot(wait, this, [this, serial = loadSerial_] {
+        if (serial != loadSerial_ || !session_)
+            return;
+        session_->run(hid::Priority::Interactive, this, [](hid::Link &link) {
+            auto before = armed::clockGet(link);
+            const QDateTime now = QDateTime::currentDateTime();
+            armed::clockSet(link, now);
+            return std::pair{before, now};
+        }, [this, serial](hid::Result<std::pair<std::optional<QDateTime>, QDateTime>> r) {
+            if (serial != loadSerial_)
+                return;
+            if (!r.ok()) {
+                clockStatus_ = tr("NOT SYNCED");
+            } else {
+                const auto &[was, now] = *r.value;
+                QDateTime nowLocal(now.date(), QTime(now.time().hour(), now.time().minute(), now.time().second()));
+                clockStatus_ = tr("SYNCED %1").arg(now.toString("HH:mm:ss"));
+                if (was)
+                    clockStatus_ += tr("  ·  WAS %1%2 S OFF")
+                                        .arg(was->secsTo(nowLocal) <= 0 ? "+" : "-")
+                                        .arg(std::abs(was->secsTo(nowLocal)));
+            }
+            emit clockSynced();
+        }, QStringLiteral("clock"));
     });
 }

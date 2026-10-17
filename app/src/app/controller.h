@@ -7,6 +7,7 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QTimer>
 #include <QWidget>
 
 #include <memory>
@@ -71,6 +72,10 @@ public:
     std::optional<Themes> &themes() { return themes_; }
     void loadThemes(std::function<void(bool ok)> done);
 
+    // the keyboard's clock follows this computer's: on connect and every ten minutes
+    void syncClock();
+    QString clockStatus() const { return clockStatus_; }
+
     // a .vil file onto the keyboard; done(ok, message)
     void restoreLayout(const QByteArray &vil, std::function<void(bool, const QString &)> done);
 
@@ -88,6 +93,7 @@ signals:
     void keymapChanged();   // keys, encoders or layout options changed (here or by a revert)
     void lockChanged();
     void armedValuesChanged();
+    void clockSynced();
     void busyChanged(bool busy);
     void toastRequested(const QString &text, Controller::ToastKind kind);
 
@@ -110,4 +116,6 @@ private:
     quint64 loadSerial_ = 0;
     QWidget *dialogParent_ = nullptr;
     std::optional<Themes> themes_;
+    QTimer clockTimer_;
+    QString clockStatus_;
 };

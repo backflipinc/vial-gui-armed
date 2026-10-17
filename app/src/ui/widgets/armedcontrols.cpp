@@ -25,7 +25,7 @@ BracketFrame::BracketFrame(const QString &title, bool accent, QWidget *parent)
     box_->setSpacing(9);
     if (!title.isNull()) {
         title_ = new QLabel(title);
-        title_->setFont(head(17));
+        title_->setObjectName("armedFrameTitle");
         header_ = new QHBoxLayout;
         header_->setSpacing(10);
         header_->addWidget(title_);
@@ -202,6 +202,11 @@ void Segmented::setCurrent(int index)
 {
     if (auto *b = group_->button(index))
         b->setChecked(true);
+}
+
+int Segmented::current() const
+{
+    return group_->checkedId();
 }
 
 // ---- light bar

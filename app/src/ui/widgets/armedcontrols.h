@@ -71,6 +71,7 @@ public:
     explicit Segmented(const QStringList &labels = {}, QWidget *parent = nullptr);
     void setLabels(const QStringList &labels);
     void setCurrent(int index);
+    int current() const;
 
 signals:
     void changed(int index);

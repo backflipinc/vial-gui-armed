@@ -139,6 +139,7 @@ QSplitter::handle:hover { background: @ACC@; }
 #armedSubNav QPushButton:last-child { border-right-width: 1px; }
 #armedSubNav QPushButton:checked { background: @ACC@; color: @BG@; border-color: @ACC@; }
 #armedHint { color: @DIM@; font-size: 12px; }
+#armedFrameTitle { font-family: "@HEAD@"; font-size: 17px; font-weight: bold; color: @TXT@; }
 #armedEmptyTitle { font-family: "@HEAD@"; font-size: 28px; font-weight: bold; color: @TXT@; }
 #armedEmptyText { color: @MID@; font-size: 14px; }
 #armedToast { background: @PANEL@; border: 1px solid @LINE2@; border-left: 4px solid @ACC@; }

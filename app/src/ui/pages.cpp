@@ -1,6 +1,8 @@
 #include "ui/pages.h"
 
+#include "pages/armeddevice.h"
 #include "pages/armedlighting.h"
+#include "pages/armedscreen.h"
 #include "pages/entrypages.h"
 #include "pages/keymappage.h"
 #include "pages/layoutpage.h"
@@ -58,7 +60,8 @@ QList<NavEntry> navEntries()
              return kb && ((kb->lighting == "vialrgb" && !armedHas(c, F_RGB_MATRIX)) || kb->lighting.startsWith("qmk_"));
          }, {{"Lighting", [](Controller *c) { return new RgbPage(c); }}}},
         {"Screen", [](const Controller &c) { return armedHas(c, F_SCREEN) || armedHas(c, F_HUD) || armedHas(c, F_DISPLAY); },
-         {pending("Settings"), pending("HUD editor"), pending("Animation")}},
+         {{"Settings", [](Controller *c) { return new ScreenSettingsPage(c); }}, pending("HUD editor"),
+          {"Animation", [](Controller *c) { return new AnimationPage(c); }}}},
         {"Tap Dance", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.tapDance > 0; },
          {{"Tap Dance", [](Controller *c) { return new TapDancePage(c); }}}},
         {"Combos", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.combo > 0; },
@@ -78,6 +81,6 @@ QList<NavEntry> navEntries()
              return (cur && cur->kind == hid::DeviceKind::Bootloader) || (c.keyboard() && c.keyboard()->def.vibl);
          }, {{"Firmware", [](Controller *c) { return new FirmwarePage(c); }}}},
         {"Device", [](const Controller &c) { return c.keyboard() && c.keyboard()->armed.has_value(); },
-         {pending("Device")}},
+         {{"Device", [](Controller *c) { return new ArmedDevicePage(c); }}}},
     };
 }

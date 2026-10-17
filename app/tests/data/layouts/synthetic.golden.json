@@ -1,0 +1,682 @@
+[
+ {
+  "x": 0,
+  "y": 0,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,0",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   0,
+   0
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 1,
+  "y": 0,
+  "width": 1.5,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1.5,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,1",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   0,
+   1
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 2.5,
+  "y": 0,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,2",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   "0,0",
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   0,
+   2
+  ],
+  "layout": [
+   0,
+   0
+  ]
+ },
+ {
+  "x": 3.75,
+  "y": 0,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,3",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   "0,1",
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   0,
+   3
+  ],
+  "layout": [
+   0,
+   1
+  ]
+ },
+ {
+  "x": 4.75,
+  "y": 0,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,4",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   "0,1",
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   0,
+   4
+  ],
+  "layout": [
+   0,
+   1
+  ]
+ },
+ {
+  "x": 0.25,
+  "y": 1,
+  "width": 1.25,
+  "height": 2,
+  "x2": -0.25,
+  "y2": 0,
+  "width2": 1.5,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "1,0",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   1,
+   0
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 1.5,
+  "y": 1,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": true,
+  "ghost": false,
+  "labels": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   0,
+   0
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 2.5,
+  "y": 1,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "1,1",
+   null,
+   null,
+   null,
+   null,
+   null,
+   "Top",
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   1,
+   1
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 3,
+  "y": 2.5,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 3,
+  "rotation_y": 2,
+  "rotation_angle": 15,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "2,0",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   2,
+   0
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 4,
+  "y": 2.5,
+  "width": 2,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 2,
+  "height2": 1,
+  "rotation_x": 3,
+  "rotation_y": 2,
+  "rotation_angle": 15,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "2,1",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   "1,0",
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   2,
+   1
+  ],
+  "layout": [
+   1,
+   0
+  ]
+ },
+ {
+  "x": 6,
+  "y": 2.5,
+  "width": 1.5,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1.5,
+  "height2": 1,
+  "rotation_x": 3,
+  "rotation_y": 2,
+  "rotation_angle": 15,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "2,2",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   "1,1",
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   2,
+   2
+  ],
+  "layout": [
+   1,
+   1
+  ]
+ },
+ {
+  "x": 7.5,
+  "y": 2.5,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 3,
+  "rotation_y": 2,
+  "rotation_angle": 15,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "2,3",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   2,
+   3
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 7.0,
+  "y": 3.75,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 6.5,
+  "rotation_y": 4.25,
+  "rotation_angle": -10,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "3,0",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   3,
+   0
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 8.0,
+  "y": 3.75,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 6.5,
+  "rotation_y": 4.25,
+  "rotation_angle": -10,
+  "decal": false,
+  "ghost": true,
+  "labels": [
+   null,
+   "3,1",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "none",
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 9.0,
+  "y": 3.75,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 6.5,
+  "rotation_y": 4.25,
+  "rotation_angle": -10,
+  "decal": false,
+  "ghost": true,
+  "labels": [
+   "3,2",
+   null,
+   null,
+   null,
+   "e",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "encoder",
+  "encoder": [
+   3,
+   2
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 10.0,
+  "y": 3.75,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 6.5,
+  "rotation_y": 4.25,
+  "rotation_angle": -10,
+  "decal": false,
+  "ghost": true,
+  "labels": [
+   "3,3",
+   null,
+   null,
+   null,
+   "e",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "encoder",
+  "encoder": [
+   3,
+   3
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 6.5,
+  "y": 4.75,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 6.5,
+  "rotation_y": 4.25,
+  "rotation_angle": -10,
+  "decal": false,
+  "ghost": true,
+  "labels": [
+   "3,4",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   3,
+   4
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 7.5,
+  "y": 4.75,
+  "width": 1,
+  "height": 1,
+  "x2": 1,
+  "y2": 0.5,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 6.5,
+  "rotation_y": 4.25,
+  "rotation_angle": -10,
+  "decal": false,
+  "ghost": true,
+  "labels": [
+   "3,5",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   3,
+   5
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ }
+]

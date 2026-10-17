@@ -7,6 +7,12 @@ add_library(vialarmed_core STATIC
     core/lzma.cpp
     core/lzma.h
     core/paths.h
+    keycodes/anykeycode.cpp
+    keycodes/anykeycode.h
+    keycodes/keycodes.cpp
+    keycodes/keycodes.h
+    keycodes/tables.h
+    keycodes/tables_gen.cpp
     hid/devices.cpp
     hid/devices.h
     hid/link.cpp
@@ -17,6 +23,10 @@ add_library(vialarmed_core STATIC
     hid/rawhid.h
     hid/session.cpp
     hid/session.h
+    model/definition.cpp
+    model/definition.h
+    model/kle.cpp
+    model/kle.h
     protocol/armed.cpp
     protocol/armed.h
     protocol/vial.cpp

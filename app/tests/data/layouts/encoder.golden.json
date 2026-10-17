@@ -1,0 +1,116 @@
+[
+ {
+  "x": 0,
+  "y": 0,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,0",
+   null,
+   null,
+   null,
+   "e",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "encoder",
+  "encoder": [
+   0,
+   0
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 1,
+  "y": 0,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,1",
+   null,
+   null,
+   null,
+   "e",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "encoder",
+  "encoder": [
+   0,
+   1
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ },
+ {
+  "x": 0,
+  "y": 1,
+  "width": 1,
+  "height": 1,
+  "x2": 0,
+  "y2": 0,
+  "width2": 1,
+  "height2": 1,
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_angle": 0,
+  "decal": false,
+  "ghost": false,
+  "labels": [
+   "0,0",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "role": "key",
+  "matrix": [
+   0,
+   0
+  ],
+  "layout": [
+   -1,
+   -1
+  ]
+ }
+]

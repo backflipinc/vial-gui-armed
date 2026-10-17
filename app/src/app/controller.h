@@ -55,6 +55,8 @@ public:
     void setKey(int layer, int row, int col, const QString &code);
     void setEncoder(int layer, int index, int direction, const QString &code);
     void setLayoutOptions(quint32 options);
+    // a .vil file onto the keyboard; done(ok, message)
+    void restoreLayout(const QByteArray &vil, std::function<void(bool, const QString &)> done);
 
 public slots:
     void select(int index);

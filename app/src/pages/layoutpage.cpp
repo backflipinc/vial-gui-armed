@@ -15,10 +15,11 @@ LayoutPage::LayoutPage(Controller *ctl)
     , grid_(new QGridLayout)
 {
     view_->setSelectable(false);
-    view_->setScale(0.7);
+    auto *fitted = new FittedKeyboard(view_);
+    fitted->setPreferredScale(0.7);
     auto *l = new QVBoxLayout(this);
     l->addStretch(1);
-    l->addWidget(view_, 0, Qt::AlignHCenter);
+    l->addWidget(fitted);
     l->addSpacing(ui::theme::S5);
     auto *form = new QWidget;
     form->setLayout(grid_);

@@ -57,10 +57,11 @@ Unlocker::Unlocker(Controller *ctl, QWidget *parent)
     t->setWordWrap(true);
     l->addWidget(t);
     view_->setSelectable(false);
-    view_->setScale(0.5);
+    auto *fitted = new FittedKeyboard(view_);
+    fitted->setPreferredScale(0.5);
     if (const KeyboardState *kb = ctl->keyboard())
         view_->setKeys(kb->def.keys, kb->def.encoders);
-    l->addWidget(view_, 0, Qt::AlignHCenter);
+    l->addWidget(fitted);
     progress_->setRange(0, 1);
     progress_->setValue(0);
     l->addWidget(progress_);

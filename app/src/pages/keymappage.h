@@ -2,6 +2,7 @@
 
 #include "ui/page.h"
 
+class FittedKeyboard;
 class KeyboardView;
 class KeycodePalette;
 class QButtonGroup;
@@ -21,7 +22,6 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *e) override;
-    bool eventFilter(QObject *obj, QEvent *e) override;
 
 private:
     void refresh();
@@ -38,7 +38,7 @@ private:
     QHBoxLayout *layerRow_;
     QButtonGroup *layers_;
     QLabel *selection_;
-    QScrollArea *viewArea_ = nullptr;
+    FittedKeyboard *fitted_ = nullptr;
     QSplitter *split_ = nullptr;
     double userScale_ = 1.0;
     int layer_ = 0;

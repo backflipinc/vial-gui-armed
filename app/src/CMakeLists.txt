@@ -66,6 +66,10 @@ endif()
 qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     main.cpp
     app/controller.cpp
+    app/firmwareflasher.cpp
+    app/firmwareflasher.h
+    pages/vialpages.cpp
+    pages/vialpages.h
     app/controller.h
     pages/entrypages.cpp
     pages/entrypages.h

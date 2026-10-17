@@ -1,6 +1,7 @@
 #include "app/controller.h"
 
 #include "keycodes/keycodes.h"
+#include "model/qmksettings.h"
 #include "ui/unlocker.h"
 
 #include <QElapsedTimer>
@@ -277,4 +278,61 @@ void Controller::setLayoutOptions(quint32 options)
               if (keyboard_)
                   keyboard_->layoutOptions = old;
           });
+}
+
+void Controller::restoreLayout(const QByteArray &vil, std::function<void(bool, const QString &)> done)
+{
+    KeyboardState *kb = keyboard();
+    if (!kb || !session_) {
+        done(false, tr("No keyboard"));
+        return;
+    }
+    LayoutRestore plan;
+    try {
+        plan = planRestore(*kb, vil);
+    } catch (const std::exception &e) {
+        done(false, tr("Not a layout file: %1").arg(QString::fromUtf8(e.what())));
+        return;
+    }
+    if (plan.empty()) {
+        done(true, tr("The keyboard already has this layout"));
+        return;
+    }
+    // codes are resolved here, on the GUI thread, where the keycode registry lives
+    const int macroMemory = kb->macroInfo.memory;
+    auto code = [](const QString &n) { return quint16(keycodes::Registry::instance().deserialize(n)); };
+    QList<std::function<void(hid::Link &)>> writes;
+    for (const auto &k : plan.keys)
+        writes.append([l = k.layer, r = k.row, c = k.col, v = code(k.code)](hid::Link &link) { vial::setKeycode(link, l, r, c, v); });
+    for (const auto &e : plan.encoders)
+        writes.append([l = e.layer, i = e.index, d = e.direction, v = code(e.code)](hid::Link &link) { vial::setEncoder(link, l, i, d, v); });
+    if (plan.layoutOptions)
+        writes.append([o = *plan.layoutOptions](hid::Link &link) { vial::setLayoutOptions(link, o); });
+    if (plan.macros)
+        writes.append([m = *plan.macros, macroMemory](hid::Link &link) { vial::setMacroBuffer(link, m, macroMemory); });
+    for (const auto &[i, e] : plan.tapDances)
+        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_TAP_DANCE_SET, i, d, 20); });
+    for (const auto &[i, e] : plan.combos)
+        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_COMBO_SET, i, d, 20); });
+    for (const auto &[i, e] : plan.keyOverrides)
+        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_KEY_OVERRIDE_SET, i, d, 1); });
+    for (const auto &[i, e] : plan.altRepeatKeys)
+        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_ALT_REPEAT_KEY_SET, i, d, 1); });
+    for (const auto &[q, v] : plan.settings)
+        writes.append([q, b = qmksettings::Catalog::instance().serialize(q, v)](hid::Link &link) { vial::qmkSettingSet(link, q, b); });
+
+    const int n = int(writes.size());
+    const KeyboardState before = *kb;
+    applyRestore(*kb, plan);
+    write(plan.touchesReset(), [writes](hid::Link &link) {
+        for (const auto &w : writes)
+            w(link);
+    }, [this, before] {
+        if (keyboard_)
+            *keyboard_ = before;
+        emit keyboardChanged();
+    }, [this, n, done] {
+        emit keyboardChanged();
+        done(true, tr("Layout loaded: %1 changes").arg(n));
+    });
 }

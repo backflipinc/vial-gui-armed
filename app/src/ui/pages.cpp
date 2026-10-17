@@ -4,6 +4,7 @@
 #include "pages/keymappage.h"
 #include "pages/layoutpage.h"
 #include "pages/macropage.h"
+#include "pages/vialpages.h"
 #include "protocol/armed.h"
 
 #include <QLabel>
@@ -53,9 +54,8 @@ QList<NavEntry> navEntries()
          {pending("Effects"), pending("Theme editor")}},
         {"Lighting", [](const Controller &c) {
              const KeyboardState *kb = c.keyboard();
-             return kb && !armedHas(c, F_RGB_MATRIX)
-                 && (kb->lighting == "vialrgb" || kb->lighting.startsWith("qmk_"));
-         }, {pending("Lighting")}},
+             return kb && ((kb->lighting == "vialrgb" && !armedHas(c, F_RGB_MATRIX)) || kb->lighting.startsWith("qmk_"));
+         }, {{"Lighting", [](Controller *c) { return new RgbPage(c); }}}},
         {"Screen", [](const Controller &c) { return armedHas(c, F_SCREEN) || armedHas(c, F_HUD) || armedHas(c, F_DISPLAY); },
          {pending("Settings"), pending("HUD editor"), pending("Animation")}},
         {"Tap Dance", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.tapDance > 0; },
@@ -67,14 +67,15 @@ QList<NavEntry> navEntries()
         {"Alt Repeat Key", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.altRepeatKey > 0; },
          {{"Alt Repeat Key", [](Controller *c) { return new AltRepeatKeyPage(c); }}}},
         {"QMK Settings", [](const Controller &c) { return c.keyboard() && !c.keyboard()->settings.isEmpty(); },
-         {pending("QMK Settings")}},
+         {{"QMK Settings", [](Controller *c) { return new QmkSettingsPage(c); }}}},
         {"Matrix Tester", [](const Controller &c) {
-             return c.keyboard() && (c.keyboard()->vialProtocol >= 3 || c.keyboard()->vialProtocol < 0);
-         }, {pending("Matrix Tester")}},
+             const KeyboardState *kb = c.keyboard();
+             return kb && kb->vialProtocol >= 3 && (kb->def.cols / 8 + 1) * kb->def.rows <= 28;
+         }, {{"Matrix Tester", [](Controller *c) { return new MatrixPage(c); }}}},
         {"Firmware", [](const Controller &c) {
              auto cur = c.current();
              return (cur && cur->kind == hid::DeviceKind::Bootloader) || (c.keyboard() && c.keyboard()->def.vibl);
-         }, {pending("Firmware")}},
+         }, {{"Firmware", [](Controller *c) { return new FirmwarePage(c); }}}},
         {"Device", [](const Controller &c) { return c.keyboard() && c.keyboard()->armed.has_value(); },
          {pending("Device")}},
     };

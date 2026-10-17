@@ -57,6 +57,8 @@ public:
     QSize naturalSize() const { return natural_; }
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override { return sizeHint(); }
+    // the scale it was given, before a container fitted it
+    double preferredScale() const { return preferred_; }
 
 signals:
     void clicked(int index, bool mask);
@@ -80,9 +82,35 @@ private:
     QList<Key> visible_; // the ones the current layout choice shows
     std::function<int(int)> choice_;
     double scale_ = 1.0;
+    double preferred_ = 1.0;
+    friend class FittedKeyboard;
     int active_ = -1;
     bool activeMask_ = false;
     bool selectable_ = true;
     QSize size_, natural_;
     mutable QHash<QPair<QString, int>, QFont> fitCache_;
+};
+
+// A KeyboardView that shrinks to the width it gets (never larger than its preferred scale): pages stay usable in
+// small windows without forcing the window wide
+class FittedKeyboard : public QWidget {
+    Q_OBJECT
+
+public:
+    explicit FittedKeyboard(KeyboardView *view, QWidget *parent = nullptr);
+    KeyboardView *view() const { return view_; }
+    void setPreferredScale(double s);
+    void fit();
+
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override { return {160, 60}; }
+    bool hasHeightForWidth() const override { return true; }
+    int heightForWidth(int w) const override;
+
+protected:
+    void resizeEvent(QResizeEvent *e) override;
+    bool event(QEvent *e) override;
+
+private:
+    KeyboardView *view_;
 };

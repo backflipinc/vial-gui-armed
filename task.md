@@ -30,7 +30,12 @@
 - [x] Отмена обмена при закрытии/выходе (выход мгновенный); старт ~0.19 с против ~0.65 с
 
 ## 5. Страницы Vial
-- [ ] Keymap, Layout, Macros, Tap Dance, Combos, Key Overrides, Alt Repeat, QMK Settings, Matrix, Firmware, About
+- [x] Keymap (палитра кейкодов нарисована целиком + поиск, автоподгонка, PgUp/PgDn, Del, Esc), Layout
+- [x] Macros (строки действий, текстовый редактор, запись: evdev-хелпер на Linux, хук на Windows)
+- [x] Tap Dance, Combos, Key Overrides (исправлены подписи бит 4/5), Alt Repeat Key — список + живой редактор
+- [x] QMK Settings, Matrix Tester, Firmware (vibl, восстановление раскладки), Lighting (VialRGB/QMK), About
+- [x] Разблокировка (асинхронная), .vil через контроллер
+- [ ] «Load dummy JSON» (клавиатура-пустышка для отладки) — не перенесено
 
 ## 6. Страницы Armed
 - [ ] Lighting, Themes, Device, Screen, HUD editor, Animation, HUD agent

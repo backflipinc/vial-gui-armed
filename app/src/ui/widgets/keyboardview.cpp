@@ -56,7 +56,9 @@ void KeyboardView::setLayoutChoice(std::function<int(int)> choice)
 
 void KeyboardView::setScale(double s)
 {
-    scale_ = std::clamp(s, 0.4, 3.0);
+    scale_ = std::clamp(s, 0.2, 3.0);
+    if (!qobject_cast<FittedKeyboard *>(parentWidget()))
+        preferred_ = scale_;
     relayout();
 }
 
@@ -399,4 +401,61 @@ void KeyboardView::paintEvent(QPaintEvent *)
         }
         qp.restore();
     }
+}
+
+FittedKeyboard::FittedKeyboard(KeyboardView *view, QWidget *parent)
+    : QWidget(parent)
+    , view_(view)
+{
+    view_->setParent(this);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+}
+
+void FittedKeyboard::setPreferredScale(double s)
+{
+    view_->preferred_ = std::clamp(s, 0.2, 3.0);
+    fit();
+}
+
+void FittedKeyboard::fit()
+{
+    const QSize nat = view_->naturalSize();
+    double s = view_->preferred_;
+    if (nat.width() > 0 && width() > 20)
+        s = std::min(s, double(width() - 2) / nat.width());
+    if (std::abs(s - view_->scale()) > 0.003) {
+        view_->scale_ = std::clamp(s, 0.2, 3.0);
+        view_->relayout();
+    }
+    const QSize vs = view_->sizeHint();
+    view_->setGeometry((width() - vs.width()) / 2, 0, vs.width(), vs.height());
+    updateGeometry();
+}
+
+QSize FittedKeyboard::sizeHint() const
+{
+    const QSize nat = view_->naturalSize();
+    return {int(nat.width() * view_->preferred_), int(nat.height() * view_->preferred_)};
+}
+
+int FittedKeyboard::heightForWidth(int w) const
+{
+    const QSize nat = view_->naturalSize();
+    if (nat.width() <= 0)
+        return 0;
+    const double s = std::min(view_->preferred_, double(w - 2) / nat.width());
+    return int(std::ceil(nat.height() * s));
+}
+
+void FittedKeyboard::resizeEvent(QResizeEvent *)
+{
+    fit();
+}
+
+bool FittedKeyboard::event(QEvent *e)
+{
+    // the view relaid itself out (new keys, layout option): fit again
+    if (e->type() == QEvent::LayoutRequest)
+        fit();
+    return QWidget::event(e);
 }

@@ -1,9 +1,7 @@
 #include "ui/mainwindow.h"
 
 #include "core/appinfo.h"
-#include "keycodes/keycodes.h"
 #include "keycodes/tables.h"
-#include "model/qmksettings.h"
 #include "ui/keycodedisplay.h"
 #include "ui/pages.h"
 #include "ui/sidenav.h"
@@ -553,8 +551,7 @@ void MainWindow::saveLayout()
 
 void MainWindow::loadLayout()
 {
-    KeyboardState *kb = ctl_.keyboard();
-    if (!kb || !ctl_.session())
+    if (!ctl_.keyboard())
         return;
     QString path = QFileDialog::getOpenFileName(this, tr("Load layout"), settings_.value("layout_dir").toString(),
                                                 tr("Vial layout (*.vil)"));
@@ -566,57 +563,8 @@ void MainWindow::loadLayout()
         return;
     }
     settings_.setValue("layout_dir", QFileInfo(path).absolutePath());
-    LayoutRestore plan;
-    try {
-        plan = planRestore(*kb, f.readAll());
-    } catch (const std::exception &e) {
-        ctl_.toast(tr("Not a layout file: %1").arg(QString::fromUtf8(e.what())), Controller::ToastKind::Error);
-        return;
-    }
-    if (plan.empty()) {
-        ctl_.toast(tr("The keyboard already has this layout"), Controller::ToastKind::Ok);
-        return;
-    }
-    if (plan.touchesReset() && !ctl_.unlocked()) {
-        ctl_.toast(tr("This layout changes macros or QK_BOOT: unlock the keyboard first"), Controller::ToastKind::Error);
-        return;
-    }
-    applyRestore(*kb, plan);
-    const int macroMemory = kb->macroInfo.memory;
-    // codes are resolved here, on the GUI thread, where the keycode registry lives
-    QList<std::function<void(hid::Link &)>> writes;
-    auto code = [](const QString &n) { return quint16(keycodes::Registry::instance().deserialize(n)); };
-    for (const auto &k : plan.keys)
-        writes.append([l = k.layer, r = k.row, c = k.col, v = code(k.code)](hid::Link &link) { vial::setKeycode(link, l, r, c, v); });
-    for (const auto &e : plan.encoders)
-        writes.append([l = e.layer, i = e.index, d = e.direction, v = code(e.code)](hid::Link &link) { vial::setEncoder(link, l, i, d, v); });
-    if (plan.layoutOptions)
-        writes.append([o = *plan.layoutOptions](hid::Link &link) { vial::setLayoutOptions(link, o); });
-    if (plan.macros)
-        writes.append([m = *plan.macros, macroMemory](hid::Link &link) { vial::setMacroBuffer(link, m, macroMemory); });
-    for (const auto &[i, e] : plan.tapDances)
-        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_TAP_DANCE_SET, i, d, 20); });
-    for (const auto &[i, e] : plan.combos)
-        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_COMBO_SET, i, d, 20); });
-    for (const auto &[i, e] : plan.keyOverrides)
-        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_KEY_OVERRIDE_SET, i, d, 1); });
-    for (const auto &[i, e] : plan.altRepeatKeys)
-        writes.append([i, d = e.pack()](hid::Link &link) { vial::setDynamicEntry(link, vial::DYNAMIC_VIAL_ALT_REPEAT_KEY_SET, i, d, 1); });
-    for (const auto &[q, v] : plan.settings)
-        writes.append([q, v](hid::Link &link) {
-            vial::qmkSettingSet(link, q, qmksettings::Catalog::instance().serialize(q, v));
-        });
-    const int n = int(writes.size());
-    ctl_.toast(tr("Writing the layout: %1 changes…").arg(n));
-    ctl_.session()->run(hid::Priority::Interactive, this, [writes](hid::Link &link) {
-        for (const auto &w : writes)
-            w(link);
-    }, [this, n](hid::Result<hid::Unit> r) {
-        if (r.ok())
-            ctl_.toast(tr("Layout loaded: %1 changes").arg(n), Controller::ToastKind::Ok);
-        else
-            ctl_.toast(tr("Loading the layout failed: %1").arg(r.error), Controller::ToastKind::Error);
-        onKeyboardChanged();
+    ctl_.restoreLayout(f.readAll(), [this](bool ok, const QString &msg) {
+        ctl_.toast(msg, ok ? Controller::ToastKind::Ok : Controller::ToastKind::Error);
     });
 }
 

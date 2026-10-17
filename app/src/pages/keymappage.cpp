@@ -56,23 +56,18 @@ KeymapPage::KeymapPage(Controller *ctl)
         connect(sc, &QShortcut::activated, this, [this, d] { zoom(d); });
     }
 
+    fitted_ = new FittedKeyboard(view_);
     auto *viewHost = new QWidget;
     auto *vh = new QVBoxLayout(viewHost);
     vh->setContentsMargins(0, 0, 0, 0);
-    vh->addWidget(view_, 0, Qt::AlignHCenter);
+    vh->addWidget(fitted_);
     vh->addStretch(1);
-    auto *viewArea = new QScrollArea;
-    viewArea->setWidget(viewHost);
-    viewArea->setWidgetResizable(true);
-    viewArea->setFrameShape(QFrame::NoFrame);
-    viewArea->viewport()->installEventFilter(this);
-    viewArea_ = viewArea;
 
     auto *upper = new QWidget;
     auto *ul = new QVBoxLayout(upper);
     ul->setContentsMargins(0, 0, 0, 0);
     ul->addLayout(top);
-    ul->addWidget(viewArea, 1);
+    ul->addWidget(viewHost, 1);
 
     auto *split = new QSplitter(Qt::Vertical);
     split_ = split;
@@ -246,20 +241,7 @@ void KeymapPage::zoom(double delta)
 void KeymapPage::fit()
 {
     // the chosen zoom, unless the keyboard would not fit across
-    const int natural = view_->naturalSize().width();
-    const int avail = viewArea_->viewport()->width() - 4;
-    double s = userScale_;
-    if (natural > 0 && avail > 100)
-        s = std::min(s, double(avail) / natural);
-    if (std::abs(s - view_->scale()) > 0.005)
-        view_->setScale(s);
-}
-
-bool KeymapPage::eventFilter(QObject *obj, QEvent *e)
-{
-    if (obj == viewArea_->viewport() && e->type() == QEvent::Resize)
-        fit();
-    return Page::eventFilter(obj, e);
+    fitted_->setPreferredScale(userScale_);
 }
 
 void KeymapPage::keyPressEvent(QKeyEvent *e)

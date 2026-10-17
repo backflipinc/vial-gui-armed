@@ -21,6 +21,7 @@ struct Probe {
 };
 
 QMutex probeMutex;
+std::atomic<bool> probeCancel{false};
 QHash<QByteArray, Probe> probes;
 
 qint64 nowMs()
@@ -66,17 +67,25 @@ bool dongleHasVial(const QByteArray &path)
     bool ok = false;
     if (auto dev = HidapiDevice::open(path)) {
         Link link(std::move(dev), true);
+        link.cancel = &probeCancel;
         try {
             QByteArray reply = link.transact(QByteArray("\xFE\x00", 2), 2);
             ok = reply.size() >= 12 && reply.mid(4, 8) != QByteArray(8, '\0');
         } catch (const LinkError &) {
         }
     }
+    if (probeCancel)
+        return false;
     QMutexLocker lock(&probeMutex);
     probes[path] = {ok, nowMs()};
     return ok;
 }
 
+}
+
+void cancelDiscovery()
+{
+    probeCancel = true;
 }
 
 bool isDongle(quint16 vid, quint16 pid)

@@ -63,8 +63,19 @@ endif()
 
 qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     main.cpp
+    app/controller.cpp
+    app/controller.h
     ui/mainwindow.cpp
     ui/mainwindow.h
+    ui/page.h
+    ui/pages.cpp
+    ui/pages.h
+    ui/sidenav.cpp
+    ui/sidenav.h
+    ui/theme.cpp
+    ui/theme.h
+    ui/toast.cpp
+    ui/toast.h
 )
 target_link_libraries(vial-armed PRIVATE vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network)
 

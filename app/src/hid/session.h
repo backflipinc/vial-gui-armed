@@ -94,6 +94,7 @@ private:
     std::condition_variable cv_;
     std::deque<Job> queues_[3];
     bool stop_ = false;
+    std::atomic<bool> cancel_{false};
     std::thread thread_;
 };
 

@@ -24,6 +24,7 @@ DeviceMonitor::DeviceMonitor(QObject *parent)
 
 DeviceMonitor::~DeviceMonitor()
 {
+    cancelDiscovery();
 #ifdef VIAL_ARMED_UDEV
     if (udevMonitor_)
         udev_monitor_unref(static_cast<udev_monitor *>(udevMonitor_));

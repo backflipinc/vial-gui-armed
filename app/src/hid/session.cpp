@@ -26,6 +26,7 @@ Session::Session(const DeviceInfo &info, OpenFn open, QObject *parent)
 
 Session::~Session()
 {
+    cancel_ = true;
     {
         std::lock_guard lock(mutex_);
         stop_ = true;
@@ -90,8 +91,10 @@ void Session::loop()
         }
         if (!opened) {
             opened = true;
-            if (auto dev = open_())
+            if (auto dev = open_()) {
                 link = std::make_unique<Link>(std::move(dev), info_.isDongle());
+                link->cancel = &cancel_;
+            }
         }
         job.fn(link.get());
     }

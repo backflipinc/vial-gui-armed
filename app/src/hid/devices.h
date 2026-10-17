@@ -37,5 +37,7 @@ bool isDongle(quint16 vid, quint16 pid);
 
 // Blocking (a dongle probe can take a second): call it off the GUI thread
 QList<DeviceInfo> discover(const DiscoveryOptions &opt);
+// abandons dongle probes in progress, for a quick exit
+void cancelDiscovery();
 
 }

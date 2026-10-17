@@ -11,6 +11,12 @@ Link::Link(std::unique_ptr<RawHid> dev, bool dongle)
 {
 }
 
+void Link::checkCancel() const
+{
+    if (cancel && cancel->load())
+        throw LinkError("cancelled");
+}
+
 QByteArray Link::transact(QByteArray msg, int retries)
 {
     if (msg.size() > kMsgLen)
@@ -20,6 +26,7 @@ QByteArray Link::transact(QByteArray msg, int retries)
     RetryPolicy p = policy(retries);
     int timeout = p.timeoutMs;
     for (int attempt = 0; attempt < p.attempts; ++attempt) {
+        checkCancel();
         if (attempt > 0) {
             if (p.retryDelayMs)
                 sleep(p.retryDelayMs);
@@ -39,6 +46,7 @@ QByteArray Link::transact(QByteArray msg, int retries)
 
 void Link::write(QByteArray msg)
 {
+    checkCancel();
     msg.append(kMsgLen - msg.size(), '\0');
     if (dev_->write(msg) != kMsgLen + 1)
         throw LinkError("write failed");
@@ -46,6 +54,7 @@ void Link::write(QByteArray msg)
 
 QByteArray Link::read(int timeoutMs)
 {
+    checkCancel();
     return dev_->read(timeoutMs);
 }
 

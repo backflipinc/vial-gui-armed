@@ -4,6 +4,7 @@
 
 #include <QByteArray>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -41,8 +42,12 @@ public:
 
     // tests: no real sleeping
     std::function<void(int ms)> sleep;
+    // set from another thread to abandon the work in progress (closing the device, quitting)
+    const std::atomic<bool> *cancel = nullptr;
 
 private:
+    void checkCancel() const;
+
     std::unique_ptr<RawHid> dev_;
     bool dongle_;
 };

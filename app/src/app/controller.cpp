@@ -1,0 +1,183 @@
+#include "app/controller.h"
+
+#include <QElapsedTimer>
+#include <QJsonDocument>
+#include <QLoggingCategory>
+
+Q_LOGGING_CATEGORY(lcController, "armed.controller")
+
+Controller::Controller(QObject *parent)
+    : QObject(parent)
+{
+    connect(&monitor_, &hid::DeviceMonitor::devicesChanged, this, &Controller::onDevices);
+    monitor_.refresh();
+}
+
+Controller::~Controller() = default;
+
+std::optional<hid::DeviceInfo> Controller::current() const
+{
+    return current_;
+}
+
+void Controller::setState(State s, const QString &error)
+{
+    state_ = s;
+    error_ = error;
+    emit stateChanged();
+}
+
+void Controller::onDevices(const QList<hid::DeviceInfo> &devices)
+{
+    emit devicesChanged();
+    if (current_ && devices.contains(*current_))
+        return;
+    if (current_)
+        close();
+    if (!devices.isEmpty())
+        open(devices.first());
+}
+
+void Controller::select(int index)
+{
+    const auto &list = monitor_.devices();
+    if (index < 0 || index >= list.size())
+        return;
+    if (current_ && *current_ == list[index] && state_ != State::Failed)
+        return;
+    close();
+    open(list[index]);
+}
+
+void Controller::reload()
+{
+    if (!current_)
+        return;
+    hid::DeviceInfo info = *current_;
+    close();
+    open(info);
+}
+
+void Controller::close()
+{
+    ++loadSerial_;
+    bool had = keyboard_.has_value();
+    keyboard_.reset();
+    session_.reset();
+    current_.reset();
+    unlocked_ = true;
+    setState(State::NoDevice);
+    if (had)
+        emit keyboardChanged();
+}
+
+void Controller::open(const hid::DeviceInfo &info)
+{
+    current_ = info;
+    if (info.kind == hid::DeviceKind::Bootloader) {
+        setState(State::Ready);
+        emit keyboardChanged();
+        return;
+    }
+    auto opts = monitor_.options();
+    opts.busyPaths = {info.path};
+    monitor_.setOptions(opts);
+
+    session_ = std::make_unique<hid::Session>(info);
+    progress_ = info.isDongle() ? tr("READING THE KEYBOARD OVER 2.4 GHZ") : tr("READING THE KEYBOARD");
+    setState(State::Connecting);
+
+    std::optional<QByteArray> override;
+    if (info.kind == hid::DeviceKind::Sideload)
+        override = sideloadJson_;
+    else if (info.kind == hid::DeviceKind::ViaStack)
+        override = QJsonDocument(viaStack_.value("definitions").toObject().value(QString::number(info.viaId())).toObject())
+                       .toJson(QJsonDocument::Compact);
+
+    const quint64 serial = ++loadSerial_;
+    auto timer = std::make_shared<QElapsedTimer>();
+    timer->start();
+    session_->run(hid::Priority::Interactive, this, [override](hid::Link &link) { return loadRaw(link, override); },
+                  [this, serial, timer](hid::Result<RawKeyboard> r) {
+        if (serial != loadSerial_)
+            return;
+        if (!r.ok()) {
+            setState(State::Failed, r.error);
+            return;
+        }
+        auto state = KeyboardState::fromRaw(*r.value);
+        if (auto *err = std::get_if<QString>(&state)) {
+            setState(State::Failed, *err);
+            return;
+        }
+        keyboard_ = std::move(std::get<KeyboardState>(state));
+        qCInfo(lcController) << "loaded" << keyboard_->def.name << "in" << timer->elapsed() << "ms";
+        setState(State::Ready);
+        emit keyboardChanged();
+        refreshLock();
+    });
+}
+
+void Controller::refreshLock()
+{
+    if (!session_ || !keyboard_)
+        return;
+    const qint64 proto = keyboard_->vialProtocol;
+    const quint64 serial = loadSerial_;
+    session_->run(hid::Priority::Poll, this, [proto](hid::Link &link) {
+        return vial::unlockStatus(link, int(proto), 1).unlocked;
+    }, [this, serial](hid::Result<bool> r) {
+        if (serial != loadSerial_ || !r.ok())
+            return;
+        if (unlocked_ != *r.value) {
+            unlocked_ = *r.value;
+            emit lockChanged();
+        }
+    }, QStringLiteral("unlock-status"));
+}
+
+void Controller::lockKeyboard()
+{
+    if (!session_ || !keyboard_ || keyboard_->vialProtocol < 0)
+        return;
+    session_->run(hid::Priority::Interactive, this, [](hid::Link &link) { vial::lock(link); },
+                  [this](hid::Result<hid::Unit>) { refreshLock(); });
+}
+
+void Controller::setViaStack(const QByteArray &json)
+{
+    viaStack_ = QJsonDocument::fromJson(json).object();
+    auto opts = monitor_.options();
+    opts.viaStackIds.clear();
+    const QJsonObject defs = viaStack_.value("definitions").toObject();
+    for (auto it = defs.begin(); it != defs.end(); ++it)
+        opts.viaStackIds.insert(it.key().toUInt());
+    monitor_.setOptions(opts);
+}
+
+bool Controller::sideload(const QByteArray &json, QString *error)
+{
+    QJsonObject o = QJsonDocument::fromJson(json).object();
+    bool okV = false, okP = false;
+    int vid = o.value("vendorId").toString().toInt(&okV, 16);
+    int pid = o.value("productId").toString().toInt(&okP, 16);
+    if (!okV || !okP) {
+        *error = tr("The file has no vendorId / productId");
+        return false;
+    }
+    sideloadJson_ = json;
+    auto opts = monitor_.options();
+    opts.sideloadVid = vid;
+    opts.sideloadPid = pid;
+    monitor_.setOptions(opts);
+    return true;
+}
+
+void Controller::setBusy(bool busy)
+{
+    if (busy_ == busy)
+        return;
+    busy_ = busy;
+    monitor_.setPaused(busy);
+    emit busyChanged(busy);
+}

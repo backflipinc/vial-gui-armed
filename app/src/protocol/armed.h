@@ -43,7 +43,7 @@ inline constexpr int LIST_MAX = 32;
 enum Value : quint8 {
     V_ENABLED, V_EFFECT, V_COLOR2, V_FN_COLOR, V_STRIP_MODE, V_STRIP_COLOR, V_STRIP_CAPS, V_SLEEP,
     V_HUE, V_SAT, V_VAL, V_SPEED, V_SCREEN, V_CLOCK, V_NKRO, V_GUI_LOCK, V_SNAPTAP, V_ACCENT, V_SCREEN_OFF,
-    V_BT_SLOT,
+    V_BT_SLOT, V_HUD_SCREEN,
 };
 
 enum Feature : quint16 {
@@ -165,6 +165,7 @@ void themeRevert(Link &link, int slot);
 struct HudInfo {
     int format = 0, maxWidgets = 0, widgetSize = 0, layoutSize = 0, strings = 0, hostValues = 0, hostTexts = 0,
         textLen = 0, fonts = 0, colors = 0, sources = 0, width = 0, height = 0, graphs = 0, graphPoints = 0;
+    int screens = 1, screen = 0; // stored layouts and the one shown; older firmware has one
 };
 struct HudSource {
     int id = 0, kind = 0;

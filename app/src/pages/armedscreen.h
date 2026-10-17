@@ -26,6 +26,9 @@ public:
 
 private:
     void load();
+    void setPool(int index);
+    int hudScreens_ = 1; // HUD layouts the keyboard keeps; with the animation they make the main screens
+    quint64 serial_ = 0;
     Segmented *mode_, *accent_, *screenOff_, *clockFmt_;
     BracketFrame *display_, *clock_;
     QLabel *clockStatus_;

@@ -30,6 +30,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPointer>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QSaveFile>
 #include <QScrollArea>
@@ -266,6 +267,13 @@ HudEditorPage::HudEditorPage(Controller *ctl)
     view_ = new Segmented({tr("LAYOUT"), tr("AGENT")});
     view_->setCurrent(0);
     top->addWidget(view_);
+    screens_ = new Segmented;
+    screens_->setToolTip(tr("The keyboard keeps several HUD layouts; the one picked here is shown and edited. "
+                            "On the keyboard: Fn+Left / Fn+Right"));
+    screens_->hide();
+    connect(screens_, &Segmented::changed, this, &HudEditorPage::onScreen);
+    top->addSpacing(8);
+    top->addWidget(screens_);
     top->addSpacing(8);
     state_ = new QLabel;
     top->addWidget(state_);
@@ -445,7 +453,23 @@ QWidget *HudEditorPage::buildLayoutView()
     canvasScroll_->setWidget(canvas_);
     canvasScroll_->setMinimumHeight(200);
     canvasScroll_->viewport()->installEventFilter(this);
-    screenFrame_->box()->addWidget(canvasScroll_, 1);
+    // until the first preview is drawn: what is being read
+    auto *loading = new QWidget;
+    auto *ll = new QVBoxLayout(loading);
+    ll->addStretch(1);
+    loadingLbl_ = styled(tr("READING THE HUD…"), "armedHint");
+    loadingLbl_->setAlignment(Qt::AlignCenter);
+    loadingBar_ = new QProgressBar;
+    loadingBar_->setRange(0, 0);
+    loadingBar_->setFixedSize(260, 6);
+    ll->addWidget(loadingLbl_);
+    ll->addSpacing(th::S2);
+    ll->addWidget(loadingBar_, 0, Qt::AlignHCenter);
+    ll->addStretch(1);
+    canvasStack_ = new QStackedWidget;
+    canvasStack_->addWidget(loading);
+    canvasStack_->addWidget(canvasScroll_);
+    screenFrame_->box()->addWidget(canvasStack_, 1);
 
     status_ = styled({}, "armedHint");
     status_->setWordWrap(true);
@@ -869,6 +893,9 @@ void HudEditorPage::keyboardChanged()
     undo_.clear();
     redo_.clear();
     pushTimer_.stop();
+    checking_ = switching_ = false;
+    screens_->hide();
+    showLoading(tr("READING THE HUD…"));
     refreshAll();
     if (active_)
         load();
@@ -921,12 +948,111 @@ void HudEditorPage::showError(const QString &e)
     error_->setText(e.isEmpty() ? QString() : tr("ERROR: %1").arg(e));
 }
 
+// pct: -1 busy without a figure, -2 no bar (an error)
+void HudEditorPage::showLoading(const QString &text, int pct)
+{
+    canvasStack_->setCurrentIndex(0);
+    loadingLbl_->setText(text);
+    loadingBar_->setVisible(pct != -2);
+    if (pct >= 0) {
+        loadingBar_->setRange(0, 100);
+        loadingBar_->setValue(pct);
+    } else {
+        loadingBar_->setRange(0, 0);
+    }
+}
+
+void HudEditorPage::showCanvas()
+{
+    if (canvasStack_->currentIndex() == 1)
+        return;
+    canvasStack_->setCurrentIndex(1);
+    QTimer::singleShot(0, this, &HudEditorPage::fitCanvas);
+}
+
+void HudEditorPage::onScreen(int screen)
+{
+    if (!info_ || !loaded_ || switching_ || screen == info_->screen)
+        return;
+    if (saved_ && hud_ != *saved_) {
+        QMessageBox box(QMessageBox::Question, tr("HUD %1 is not saved").arg(info_->screen + 1),
+                        tr("HUD %1 has changes the keyboard drops when it shows another layout. Save them first?")
+                            .arg(info_->screen + 1),
+                        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+        box.setDefaultButton(QMessageBox::Save);
+        const int answer = box.exec();
+        if (answer == QMessageBox::Cancel) {
+            screens_->setCurrent(info_->screen);
+            return;
+        }
+        if (answer == QMessageBox::Save)
+            onSave();
+    }
+    pushTimer_.stop();
+    // queued after the save, before the read: the device thread runs them in order
+    ctl->armedSet(armed::V_HUD_SCREEN, screen);
+    ctl->armedSet(armed::V_SCREEN, 0);
+    readLayout(screen);
+}
+
+void HudEditorPage::readLayout(int screen)
+{
+    if (!info_ || !valid())
+        return;
+    switching_ = true;
+    showLoading(tr("READING HUD %1…").arg(screen + 1));
+    ctl->session()->run(hid::Priority::Interactive, this, [info = *info_, shown = shown_](hid::Link &link) {
+        QByteArray blob = armed::hudRead(link, info);
+        *shown = blob;
+        return blob;
+    }, [this, screen, serial = serial_](hid::Result<QByteArray> r) {
+        if (serial != serial_)
+            return;
+        switching_ = false;
+        auto layout = r.ok() ? Layout::unpack(*r.value, {info_->maxWidgets, info_->strings}) : std::nullopt;
+        if (!layout) {
+            showError(r.ok() ? tr("the keyboard's layout is not readable") : r.error);
+            showCanvas();
+            return;
+        }
+        info_->screen = screen;
+        screens_->setCurrent(screen);
+        hud_ = *layout;
+        saved_ = hud_;
+        undo_.clear();
+        redo_.clear();
+        sel_.clear();
+        showError({});
+        refreshAll();
+    });
+}
+
+// Fn+Left / Fn+Right on the keyboard switch layouts too: follow them
+void HudEditorPage::checkScreen()
+{
+    if (checking_ || switching_ || loading_ || !valid())
+        return;
+    checking_ = true;
+    ctl->session()->run(hid::Priority::Poll, this, [](hid::Link &link) { return armed::hudInfo(link); },
+                        [this, serial = serial_](hid::Result<std::optional<armed::HudInfo>> r) {
+        if (serial != serial_)
+            return;
+        checking_ = false;
+        if (!r.ok() || !*r.value || !info_ || switching_ || (*r.value)->screen == info_->screen)
+            return;
+        const int now = (*r.value)->screen;
+        pushTimer_.stop();
+        ctl->toast(tr("The keyboard switched to HUD %1").arg(now + 1));
+        readLayout(now);
+    }, QStringLiteral("hud-screen"));
+}
+
 void HudEditorPage::load()
 {
     if (loading_ || !valid())
         return;
     loading_ = true;
-    error_->setText(tr("READING THE HUD…"));
+    showLoading(tr("READING THE HUD…"));
     const KeyboardState *kb = ctl->keyboard();
     armed::ListCache cache = kb->keyboardId ? armed::ListCache(paths::configDir(), *kb->keyboardId,
                                                                kb->armed->versionString(), kb->armed->features)
@@ -954,9 +1080,16 @@ void HudEditorPage::load()
         loading_ = false;
         if (!r.ok()) {
             showError(r.error);
+            showLoading(tr("CAN'T READ THE HUD: %1").arg(r.error), -2);
             return;
         }
         info_ = r.value->info;
+        QStringList names;
+        for (int i = 0; i < info_->screens; ++i)
+            names << tr("HUD %1").arg(i + 1);
+        screens_->setLabels(names);
+        screens_->setCurrent(info_->screen);
+        screens_->setVisible(info_->screens > 1);
         sources_ = r.value->sources;
         palette_.clear();
         for (const auto &c : r.value->palette)
@@ -1017,7 +1150,7 @@ void HudEditorPage::loadFonts(const QList<QByteArray> &heads)
     auto report = [self, serial](int pct) {
         QMetaObject::invokeMethod(qApp, [self, serial, pct] {
             if (self && serial == self->serial_)
-                self->error_->setText(tr("READING THE KEYBOARD'S FONTS %1%").arg(pct));
+                self->showLoading(tr("READING THE KEYBOARD'S FONTS %1%").arg(pct), pct);
         }, Qt::QueuedConnection);
     };
     ctl->session()->run(hid::Priority::Interactive, this, [fonts, missing, paths, report](hid::Link &link) mutable {
@@ -1048,8 +1181,10 @@ void HudEditorPage::loadFonts(const QList<QByteArray> &heads)
             // a reply got lost: what was read is cached, try again
             if (++fontTries_ <= 3 && loaded_)
                 QTimer::singleShot(0, this, [this, heads] { loadFonts(heads); });
-            else
+            else {
                 showError(r.error);
+                showLoading(tr("CAN'T READ THE KEYBOARD'S FONTS: %1").arg(r.error), -2);
+            }
             return;
         }
         error_->clear();
@@ -1085,6 +1220,9 @@ void HudEditorPage::redraw()
         areas_.append(r.area(w));
     canvas_->setSelection(sel_);
     canvas_->setContent(image, &hud_, areas_);
+    // the preview is real once the keyboard's fonts are in
+    if (!fontsBusy_ && !fonts_.isEmpty() && !switching_)
+        showCanvas();
     refreshLive();
 }
 
@@ -1114,6 +1252,10 @@ void HudEditorPage::poll()
 {
     if (!loaded_ || polling_ || fontsBusy_ || !valid())
         return;
+    if (info_ && info_->screens > 1 && ++screenTicks_ * POLL_MS >= 1000) {
+        screenTicks_ = 0;
+        checkScreen();
+    }
     QList<int> used;
     bool battery = false;
     for (const auto &w : hud_.widgets) {

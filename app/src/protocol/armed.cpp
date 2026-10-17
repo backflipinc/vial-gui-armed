@@ -94,6 +94,7 @@ const QList<QPair<quint16, QList<quint8>>> &featureValues()
         {F_SNAPTAP, {V_SNAPTAP}},
         {F_DISPLAY, {V_ACCENT, V_SCREEN_OFF}},
         {F_BT_SLOT, {V_BT_SLOT}},
+        {F_HUD, {V_HUD_SCREEN}},
     };
     return v;
 }
@@ -362,7 +363,8 @@ std::optional<HudInfo> hudInfo(Link &link)
     if (u8(d, 0) == UNHANDLED)
         return std::nullopt;
     return HudInfo{u8(d, 2), u8(d, 3), u8(d, 4), le16(d, 5), le16(d, 7), u8(d, 9), u8(d, 10), u8(d, 11),
-                   u8(d, 12), u8(d, 13), u8(d, 14), le16(d, 15), le16(d, 17), u8(d, 19), u8(d, 20)};
+                   u8(d, 12), u8(d, 13), u8(d, 14), le16(d, 15), le16(d, 17), u8(d, 19), u8(d, 20),
+                   std::max(1, int(u8(d, 21))), u8(d, 21) ? int(u8(d, 22)) : 0};
 }
 
 QList<HudSource> hudSources(Link &link, const HudInfo &info, ListCache &cache)

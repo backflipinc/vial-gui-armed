@@ -21,6 +21,7 @@ class QGridLayout;
 class QLabel;
 class QLineEdit;
 class QListWidget;
+class QProgressBar;
 class QPushButton;
 class QScrollArea;
 class QShortcut;
@@ -107,6 +108,12 @@ private:
     void setFonts(const QList<QByteArray> &fonts);
     QString fontCache(const QByteArray &head) const;
     void showError(const QString &e);
+    // stored layouts: the one the keyboard shows is the one edited
+    void onScreen(int screen);
+    void readLayout(int screen);
+    void checkScreen();
+    void showLoading(const QString &text, int pct = -1);
+    void showCanvas();
 
     // rendering
     void redraw();
@@ -198,7 +205,8 @@ private:
     QList<int> sel_;
     QList<hud::Layout> undo_, redo_;
     bool updating_ = false;
-    int pollIdx_ = 0, fontTries_ = 0;
+    int pollIdx_ = 0, fontTries_ = 0, screenTicks_ = 0;
+    bool checking_ = false, switching_ = false;
     quint64 serial_ = 0;
     QPoint cursor_{-1, -1};
     QList<QShortcut *> shortcuts_;
@@ -206,7 +214,7 @@ private:
     QTimer pushTimer_, pollTimer_, paintTimer_, cfgTimer_;
 
     // top bar
-    Segmented *view_;
+    Segmented *view_, *screens_;
     QLabel *state_, *error_;
     QPushButton *undoBtn_, *redoBtn_, *presetsBtn_, *importBtn_, *exportBtn_, *revertBtn_, *saveBtn_;
     QStackedWidget *stack_;
@@ -220,6 +228,9 @@ private:
     QCheckBox *snap_, *bounds_;
     HudCanvas *canvas_;
     QScrollArea *canvasScroll_;
+    QStackedWidget *canvasStack_;
+    QLabel *loadingLbl_;
+    QProgressBar *loadingBar_;
     QListWidget *list_;
     QPushButton *dupBtn_, *upBtn_, *downBtn_, *delBtn_;
 

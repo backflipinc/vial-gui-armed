@@ -70,7 +70,8 @@ ScreenSettingsPage::ScreenSettingsPage(Controller *ctl)
     row->addWidget(mode_);
     row->addStretch(1);
     main->box()->addLayout(row);
-    main->box()->addWidget(hint(tr("What the keyboard shows when the menu is closed. Also in its menu: DISPLAY > MAIN SCREEN.")));
+    main->box()->addWidget(hint(tr("What the keyboard shows when the menu is closed. On the keyboard: Fn+Left / Fn+Right, "
+                                   "or DISPLAY > MAIN SCREEN in its menu.")));
 
     auto *grid = new QGridLayout;
     grid->setHorizontalSpacing(12);
@@ -108,7 +109,7 @@ ScreenSettingsPage::ScreenSettingsPage(Controller *ctl)
     l->addLayout(g);
     l->addStretch(1);
 
-    connect(mode_, &Segmented::changed, this, [this](int i) { this->ctl->armedSet(V_SCREEN, i); });
+    connect(mode_, &Segmented::changed, this, &ScreenSettingsPage::setPool);
     connect(accent_, &Segmented::changed, this, [this](int i) { this->ctl->armedSet(V_ACCENT, i); });
     connect(screenOff_, &Segmented::changed, this, [this](int i) { this->ctl->armedSet(V_SCREEN_OFF, i); });
     connect(clockFmt_, &Segmented::changed, this, [this](int i) { this->ctl->armedSet(V_CLOCK, i); });
@@ -133,12 +134,39 @@ void ScreenSettingsPage::keyboardChanged()
     screenOff_->setLabels(off);
     mode_->parentWidget()->setVisible(io.has(F_SCREEN));
     clockStatus_->setText(ctl->clockStatus());
+    hudScreens_ = 1;
+    mode_->setLabels({"HUD", "ANIMATION"});
     load();
+    if (io.has(F_HUD) && ctl->session()) {
+        ctl->session()->run(hid::Priority::Poll, this, [](hid::Link &link) { return hudInfo(link); },
+                            [this, serial = ++serial_](hid::Result<std::optional<HudInfo>> r) {
+            if (serial != serial_ || !r.ok() || !*r.value || (*r.value)->screens < 2)
+                return;
+            hudScreens_ = (*r.value)->screens;
+            QStringList labels;
+            for (int i = 0; i < hudScreens_; ++i)
+                labels << QStringLiteral("HUD %1").arg(i + 1);
+            mode_->setLabels(labels << "ANIMATION");
+            load();
+        });
+    }
+}
+
+// the pool: HUD 1 .. HUD n, then the animation
+void ScreenSettingsPage::setPool(int index)
+{
+    if (index < hudScreens_) {
+        if (hudScreens_ > 1)
+            ctl->armedSet(V_HUD_SCREEN, index);
+        ctl->armedSet(V_SCREEN, 0);
+    } else {
+        ctl->armedSet(V_SCREEN, 1);
+    }
 }
 
 void ScreenSettingsPage::load()
 {
-    mode_->setCurrent(ctl->armedValue(V_SCREEN));
+    mode_->setCurrent(ctl->armedValue(V_SCREEN) == 1 ? hudScreens_ : std::min(ctl->armedValue(V_HUD_SCREEN), hudScreens_ - 1));
     clockFmt_->setCurrent(ctl->armedValue(V_CLOCK));
     accent_->setCurrent(ctl->armedValue(V_ACCENT));
     screenOff_->setCurrent(ctl->armedValue(V_SCREEN_OFF));

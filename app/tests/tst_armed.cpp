@@ -23,6 +23,7 @@ struct ArmedKb {
     quint16 features = armed::F_RGB_MATRIX | armed::F_COLOR2 | armed::F_SNAPTAP | armed::F_SCREEN;
     QByteArray screen;
     int listRequests = 0;
+    int hudScreens = 0, hudScreen = 0; // 0: firmware that predates several HUD layouts
 
     QByteArray handle(const QByteArray &q)
     {
@@ -58,6 +59,12 @@ struct ArmedKb {
         case armed::SUB_GET:
             r[2] = q[2];
             r[3] = char(u8(q, 2) + 100);
+            break;
+        case armed::SUB_HUD_INFO:
+            r[2] = 1;
+            r[3] = 40;
+            r[21] = char(hudScreens);
+            r[22] = char(hudScreen);
             break;
         case armed::SUB_SCREEN_READ: {
             quint32 off = le32(q, 2);
@@ -140,6 +147,22 @@ private slots:
         QCOMPARE(b.akb.listRequests, 0);
         QCOMPARE(info->effects.size(), 3);
         QCOMPARE(info->snaptapModes.size(), 2);
+    }
+
+    void hudScreens()
+    {
+        Rig old;
+        auto info = armed::hudInfo(*old.link);
+        QVERIFY(info);
+        QCOMPARE(info->screens, 1);
+        QCOMPARE(info->screen, 0);
+
+        Rig now;
+        now.akb.hudScreens = 3;
+        now.akb.hudScreen = 1;
+        info = armed::hudInfo(*now.link);
+        QCOMPARE(info->screens, 3);
+        QCOMPARE(info->screen, 1);
     }
 
     void screenReadIsPipelined()

@@ -140,6 +140,26 @@ private slots:
         }
     }
 
+    // MIX: NORMAL covers, ADD brightens, MULTIPLY tints
+    void blendModes()
+    {
+        const QList<armed::Led> one = {{0, 0, 112, 32}};
+        auto mix = [&](int blend, theme::Rgb top) {
+            theme::Theme t = theme::Theme::blank("T", 1);
+            theme::Layer below = theme::Layer::make(theme::SOLID, {0});
+            below.a = {0, 0, 200};
+            theme::Layer above = theme::Layer::make(theme::SOLID, {0});
+            above.a = top;
+            above.blend = blend;
+            t.layers = {below, above};
+            lighting::ThemeRenderer r(one);
+            return r.frame(t, 0)[0];
+        };
+        QCOMPARE(mix(theme::NORMAL, {200, 0, 0}), (theme::Rgb{200, 0, 0}));
+        QCOMPARE(mix(theme::ADD, {200, 0, 0}), (theme::Rgb{200, 0, 200}));
+        QCOMPARE(mix(theme::MULTIPLY, {255, 0, 128}), (theme::Rgb{0, 0, 100}));
+    }
+
     // the same rules as quantum/armed/armed_theme.c layer_keys()
     void keymapLayerKeys()
     {

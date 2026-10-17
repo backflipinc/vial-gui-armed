@@ -82,6 +82,7 @@ private:
     void refreshLayerRow();
     void refreshControls();
     void refreshValues();
+    bool mixesWithNothing() const;
     void refreshKeys();
     QSet<int> layerKeys(int n) const;
     QSet<int> covered(const theme::Layer &l) const;
@@ -113,7 +114,7 @@ private:
     // widgets
     Segmented *slots_;
     QLineEdit *name_;
-    QLabel *state_, *keysHint_, *tools_, *count_, *hint_, *empty_;
+    QLabel *state_, *keysHint_, *tools_, *count_, *hint_, *empty_, *mixHint_;
     QPushButton *undoBtn_, *redoBtn_, *saveBtn_, *revertBtn_, *addBtn_, *dupBtn_, *upBtn_, *downBtn_, *delBtn_,
         *swapBtn_, *centerBtn_;
     QList<QPushButton *> groupButtons_;

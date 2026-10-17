@@ -318,6 +318,11 @@ ThemeEditorPage::ThemeEditorPage(Controller *ctl)
     rowOpacity_ = addRow(grid, 6, keyLabel(tr("OPACITY")), opacity_, opacityVal_);
     blend_->setToolTip(tr("NORMAL covers the layers below, ADD brightens them, MULTIPLY tints them"));
     rowBlend_ = addRow(grid, 7, keyLabel(tr("MIX")), blend_);
+    mixHint_ = new QLabel;
+    mixHint_->setObjectName("armedHint");
+    mixHint_->setWordWrap(true);
+    mixHint_->hide();
+    grid->addWidget(mixHint_, 9, 1, 1, 2);
     rowCond_ = addRow(grid, 8, keyLabel(tr("SHOW")), cond_);
     grid->setColumnStretch(1, 1);
     props_->box()->addLayout(grid);
@@ -1233,6 +1238,48 @@ void ThemeEditorPage::refreshValues()
     else
         paramVal_->setText(pct(l->param));
     opacityVal_->setText(pct(l->opacity));
+    const bool alone = l->blend != NORMAL && mixesWithNothing();
+    mixHint_->setVisible(alone);
+    if (alone)
+        mixHint_->setText(l->blend == ADD ? tr("No layer below shows together with this one (see SHOW), so ADD has nothing "
+                                               "to brighten and looks like NORMAL")
+                                          : tr("No layer below shows together with this one (see SHOW), so MULTIPLY tints "
+                                               "black and the keys stay dark"));
+}
+
+namespace {
+
+// whether two SHOW conditions can hold at once; a layer condition is about the active keymap layer
+bool together(int a, int b)
+{
+    auto caps = [](int c) { return c == C_CAPS ? 1 : c == C_NO_CAPS ? 0 : -1; };
+    if (caps(a) >= 0 && caps(b) >= 0 && caps(a) != caps(b))
+        return false;
+    const int ka = a & 0xF0, kb = b & 0xF0, na = a & 0x0F, nb = b & 0x0F;
+    if (ka == C_LAYER && kb == C_LAYER)
+        return na == nb;
+    if ((ka == C_LAYER && kb == C_NOT_LAYER) || (ka == C_NOT_LAYER && kb == C_LAYER))
+        return na != nb;
+    return true;
+}
+
+}
+
+// MIX blends with the layers below that are on at the same time; with none, ADD and MULTIPLY see black
+bool ThemeEditorPage::mixesWithNothing() const
+{
+    auto *self = const_cast<ThemeEditorPage *>(this);
+    const Layer *l = self->layer();
+    if (!l)
+        return false;
+    const QSet<int> mine = covered(*l);
+    const auto &ls = self->theme().layers;
+    for (int j = 0; j < cur_ && j < ls.size(); ++j) {
+        const Layer &b = ls[j];
+        if (b.type != NONE && !b.hidden() && together(l->cond, b.cond) && covered(b).intersects(mine))
+            return false;
+    }
+    return true;
 }
 
 void ThemeEditorPage::refreshKeys()

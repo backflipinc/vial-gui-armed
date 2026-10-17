@@ -1,0 +1,3 @@
+#pragma once
+
+#define VIAL_ARMED_VERSION "@VIAL_ARMED_VERSION@"

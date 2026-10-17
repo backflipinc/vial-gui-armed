@@ -1,0 +1,50 @@
+name: App (C++)
+
+on:
+  push:
+    paths: ['app/**', 'src/main/icons/**', 'src/main/resources/**', '.github/workflows/app.yml']
+  pull_request:
+    paths: ['app/**', 'src/main/icons/**', 'src/main/resources/**', '.github/workflows/app.yml']
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            qt_arch: linux_gcc_64
+          - os: windows-2025
+            qt_arch: win64_msvc2022_64
+          - os: macos-15
+            qt_arch: clang_64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Linux packages
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build libudev-dev liblzma-dev libgl1-mesa-dev libxkbcommon-dev
+
+    - uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.8.3'
+        arch: ${{ matrix.qt_arch }}
+        cache: true
+
+    - name: Configure
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then GEN="-G Ninja"; fi
+        cmake -S app -B build $GEN -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release --parallel
+
+    - name: Test
+      run: ctest --test-dir build -C Release --output-on-failure

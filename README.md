@@ -106,6 +106,8 @@ each text is a command whose output is shown (the end of it when it's longer tha
 live in `~/.config/vial-armed/hud-agent.json` (`%APPDATA%\vial-armed` on Windows); commands are never stored on the
 keyboard. To keep the HUD fed without the window, run `vial-armed --agent` (or tick RUN AT LOGIN): it finds the
 keyboard by itself, sets its clock, follows changes to the settings, and steps aside while Vial Armed is open.
+Closing the window keeps Vial Armed (and the agent) in the system tray; quit from the tray icon's menu or File > Exit,
+or untick File > Minimize to tray on close.
 
 ## Development
 

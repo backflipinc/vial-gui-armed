@@ -6,7 +6,7 @@ from json import JSONDecodeError
 
 from PyQt5.QtCore import Qt, QSettings, QStandardPaths, QTimer, QRect, QT_VERSION_STR
 from PyQt5.QtWidgets import QWidget, QComboBox, QToolButton, QHBoxLayout, QVBoxLayout, QMainWindow, QAction, qApp, \
-    QFileDialog, QDialog, QTabWidget, QActionGroup, QMessageBox, QLabel
+    QFileDialog, QDialog, QTabWidget, QActionGroup, QMessageBox, QLabel, QSystemTrayIcon, QMenu
 
 import os
 import sys
@@ -150,6 +150,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(w)
 
         self.init_menu()
+        self.init_tray()
 
         self.autorefresh = Autorefresh()
         self.autorefresh.devices_updated.connect(self.on_devices_updated)
@@ -314,9 +315,14 @@ class MainWindow(QMainWindow):
         load_dummy_act = QAction(tr("MenuFile", "Load dummy JSON..."), self)
         load_dummy_act.triggered.connect(self.on_load_dummy)
 
+        self.close_to_tray_act = QAction(tr("MenuFile", "Minimize to tray on close"), self)
+        self.close_to_tray_act.setCheckable(True)
+        self.close_to_tray_act.setChecked(self.settings.value("close_to_tray", True, bool))
+        self.close_to_tray_act.toggled.connect(lambda on: self.settings.setValue("close_to_tray", on))
+
         exit_act = QAction(tr("MenuFile", "Exit"), self)
         exit_act.setShortcut("Ctrl+Q")
-        exit_act.triggered.connect(self.close)
+        exit_act.triggered.connect(self.quit)
 
         file_menu = self.menuBar().addMenu(tr("Menu", "File"))
         file_menu.addAction(layout_load_act)
@@ -328,6 +334,8 @@ class MainWindow(QMainWindow):
             file_menu.addAction(download_via_stack_act)
             file_menu.addAction(load_dummy_act)
             file_menu.addSeparator()
+            if QSystemTrayIcon.isSystemTrayAvailable():
+                file_menu.addAction(self.close_to_tray_act)
             file_menu.addAction(exit_act)
 
         keyboard_unlock_act = QAction(tr("MenuSecurity", "Unlock"), self)
@@ -635,9 +643,64 @@ class MainWindow(QMainWindow):
         self.about_dialog.setModal(True)
         self.about_dialog.show()
 
+    def init_tray(self):
+        self.quitting = False
+        self.tray = None
+        if sys.platform == "emscripten" or not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        # the window may hide while dialogs come and go; quitting is explicit from here on
+        qApp.setQuitOnLastWindowClosed(False)
+        menu = QMenu(self)
+        menu.addAction(tr("MainWindow", "Show Vial Armed"), self.show_from_tray)
+        menu.addSeparator()
+        menu.addAction(tr("MainWindow", "Quit"), self.quit)
+        self.tray = QSystemTrayIcon(qApp.windowIcon(), self)
+        self.tray.setToolTip("Vial Armed")
+        self.tray.setContextMenu(menu)
+        self.tray.activated.connect(self.on_tray_activated)
+        self.tray.show()
+        qApp.commitDataRequest.connect(lambda *a: setattr(self, "quitting", True))
+
+    def on_tray_activated(self, reason):
+        if reason not in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
+            return
+        if self.isVisible() and not self.isMinimized():
+            self.hide_to_tray()
+        else:
+            self.show_from_tray()
+
+    def show_from_tray(self):
+        was_hidden = not self.isVisible()
+        if self.isMaximized():
+            self.showMaximized()
+        else:
+            self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        if was_hidden and self.current_tab is not None:
+            self.current_tab.editor.activate()
+
+    def hide_to_tray(self):
+        # a hidden page would keep polling the keyboard; the HUD agent keeps running
+        if self.current_tab is not None:
+            self.current_tab.editor.deactivate()
+        self.hide()
+
+    def quit(self):
+        self.quitting = True
+        self.close()
+        qApp.quit()
+
     def closeEvent(self, e):
         self.settings.setValue("size", self.size())
         self.settings.setValue("pos", self.pos())
         self.settings.setValue("maximized", self.isMaximized())
 
+        if self.tray is not None and not self.quitting and self.close_to_tray_act.isChecked():
+            self.hide_to_tray()
+            e.ignore()
+            return
+        if self.tray is not None:
+            self.tray.hide()
+            qApp.quit()
         e.accept()

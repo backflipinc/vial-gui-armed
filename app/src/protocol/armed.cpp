@@ -122,9 +122,12 @@ QList<QByteArray> ListCache::get(const QString &name, const std::function<QList<
     if (path_.isEmpty())
         return fetch();
     QJsonObject store;
-    QFile f(path_);
-    if (f.open(QIODevice::ReadOnly))
-        store = QJsonDocument::fromJson(f.readAll()).object();
+    {
+        // closed before the save below: Windows won't replace a file that is still open
+        QFile f(path_);
+        if (f.open(QIODevice::ReadOnly))
+            store = QJsonDocument::fromJson(f.readAll()).object();
+    }
     if (store.contains(name)) {
         QList<QByteArray> out;
         for (const auto &v : store.value(name).toArray())

@@ -130,6 +130,7 @@ qt_add_library(vialarmed_ui STATIC
 target_link_libraries(vialarmed_ui PUBLIC vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network)
 
 set(VIAL_ARMED_PKG ${CMAKE_CURRENT_SOURCE_DIR}/../packaging)
+set(VIAL_ARMED_RES ${CMAKE_CURRENT_SOURCE_DIR}/../resources)
 if(WIN32)
     set(app_icon ${VIAL_ARMED_PKG}/windows/vial-armed.rc)
 elseif(APPLE)
@@ -141,7 +142,6 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE main.cpp ${app_icon})
 target_link_libraries(vial-armed PRIVATE vialarmed_ui)
 
 # resource paths are the Python app's, which the code still uses
-set(VIAL_ARMED_RES ${CMAKE_CURRENT_SOURCE_DIR}/../resources)
 set(VIAL_ARMED_RES_FILES
     icons/icon.svg=icons/icon.svg
     fonts/Rajdhani-Bold.ttf=resources/base/fonts/Rajdhani-Bold.ttf

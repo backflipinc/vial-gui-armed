@@ -12,6 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 if(MSVC)
     add_compile_options(/utf-8 /Zc:__cplusplus /permissive-)
+    # windows.h would turn std::min / std::max into macros; M_PI needs asking for
+    add_compile_definitions(NOMINMAX _USE_MATH_DEFINES)
 endif()
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release)

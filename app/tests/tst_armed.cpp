@@ -1,4 +1,5 @@
 #include "core/bytes.h"
+#include "core/paths.h"
 #include "fakekeyboard.h"
 #include "protocol/armed.h"
 
@@ -94,6 +95,7 @@ private slots:
     {
         qputenv("XDG_CONFIG_HOME", home.path().toUtf8());
         qputenv("APPDATA", home.path().toUtf8());
+        qputenv("HOME", home.path().toUtf8()); // macOS: ~/Library/Application Support
     }
 
     void probeReadsListsAndValues()
@@ -128,7 +130,10 @@ private slots:
         QVERIFY(armed::probe(*a.link, 6, Q_UINT64_C(0x1122334455667788)));
         int first = a.akb.listRequests;
         QVERIFY(first > 0);
-        QVERIFY(QFile::exists(home.path() + "/vial-armed/cache/1122334455667788-1.8.0-423.json"));
+        const QString cache = paths::configDir() + "/cache/1122334455667788-1.8.0-423.json";
+        QVERIFY2(QFile::exists(cache),
+                 qPrintable(cache + " missing; there: "
+                            + QDir(paths::configDir() + "/cache").entryList(QDir::Files).join(", ")));
 
         Rig b;
         auto info = armed::probe(*b.link, 6, Q_UINT64_C(0x1122334455667788));

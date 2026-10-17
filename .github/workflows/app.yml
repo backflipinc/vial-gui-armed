@@ -60,11 +60,24 @@ jobs:
         }
 
     - name: Test
-      run: ctest --test-dir build -C Release --output-on-failure
+      shell: bash
+      run: |
+        ctest --test-dir build -C Release --output-on-failure && exit 0
+        # failures become annotations: each failed test again, its last lines
+        for t in $(sed 's/^[0-9]*://' build/Testing/Temporary/LastTestsFailed.log); do
+          exe=$(find build -type f \( -name "$t.exe" -o -name "$t" \) | head -1 || true)
+          echo "::error::$t failed"
+          (cd build/tests && "$GITHUB_WORKSPACE/$exe" 2>&1; echo "exit $?") | tail -25 | tr '\\\\' '/' | sed "s/^/::error::$t: /" || true
+        done
+        exit 1
 
     - name: Package (Linux)
       if: runner.os == 'Linux'
       run: app/packaging/linux/package.sh build dist "$VERSION"
+
+    # windeployqt adds the MSVC runtime DLLs only with VCINSTALLDIR set
+    - uses: ilammy/msvc-dev-cmd@v1
+      if: runner.os == 'Windows'
 
     - name: Package (Windows)
       if: runner.os == 'Windows'
@@ -72,7 +85,7 @@ jobs:
       run: |
         New-Item -ItemType Directory -Force dist, deploy | Out-Null
         Copy-Item build\src\Release\vial-armed.exe deploy\
-        windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw deploy\vial-armed.exe
+        windeployqt --release --compiler-runtime --no-translations --no-system-d3d-compiler --no-opengl-sw deploy\vial-armed.exe
         Compress-Archive -Path deploy\* -DestinationPath "dist\vial-armed-$env:VERSION-win.zip"
         if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
           $env:Path += ";C:\Program Files (x86)\NSIS"

@@ -25,7 +25,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(VIAL_ARMED_UDEV_FOUND ${UDEV_FOUND})
 endif()
 
-find_package(LibLZMA QUIET)
+# on Windows a runner's stray liblzma may come without headers: always build our own
+if(NOT WIN32)
+    find_package(LibLZMA QUIET)
+endif()
 if(LibLZMA_FOUND)
     set(VIAL_ARMED_LZMA LibLZMA::LibLZMA)
 else()
@@ -47,4 +50,7 @@ else()
     set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
     # xz's own LibLZMA::LibLZMA is imported in its directory only
     set(VIAL_ARMED_LZMA liblzma)
+    target_include_directories(liblzma INTERFACE $<BUILD_INTERFACE:${xz_SOURCE_DIR}/src/liblzma/api>)
+    # a static liblzma, not the DLL import declarations
+    target_compile_definitions(liblzma INTERFACE LZMA_API_STATIC)
 endif()

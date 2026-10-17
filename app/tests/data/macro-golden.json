@@ -1,0 +1,1171 @@
+{
+"1": {
+"serialize": [
+{
+"macro": [
+[
+"text",
+"Hello, world!"
+]
+],
+"hex": "48656c6c6f2c20776f726c6421"
+},
+{
+"macro": [
+[
+"tap",
+"KC_A",
+"KC_B"
+],
+[
+"down",
+"KC_LSHIFT"
+],
+[
+"tap",
+"KC_1"
+],
+[
+"up",
+"KC_LSHIFT"
+]
+],
+"hex": "0104010502e1011e03e1"
+},
+{
+"macro": [
+[
+"tap",
+"KC_ENTER",
+"MO(1)",
+"LT1(KC_A)",
+"QK_BOOT",
+"KC_TRNS"
+]
+],
+"hex": "0128050151050441055cff0101"
+},
+{
+"macro": [
+[
+"text",
+"Привет"
+],
+[
+"tap",
+"KC_SPACE"
+]
+],
+"hex": "d09fd180d0b8d0b2d0b5d182012c"
+},
+{
+"macro": [
+[
+"down",
+"KC_LGUI"
+],
+[
+"tap",
+"KC_R"
+],
+[
+"up",
+"KC_LGUI"
+],
+[
+"text",
+"cmd\n"
+]
+],
+"hex": "02e3011503e3636d640a"
+}
+],
+"deserialize": [
+{
+"hex": "4dca182530bb1d6d132cded6237b2ed91e3f721fcb",
+"macro": [
+[
+"text",
+"MÊ\u0018%0»\u001dm\u0013,ÞÖ#{.Ù\u001e?r\u001fË"
+]
+]
+},
+{
+"hex": "71174494",
+"macro": [
+[
+"text",
+"q\u0017D"
+]
+]
+},
+{
+"hex": "493c9d5c3460be31201e69fedaa0eee8b9997f5c7c2999fdafe593",
+"macro": [
+[
+"text",
+"I<\\4`¾1 \u001eiþÚ îè¹\\|)ý¯å"
+]
+]
+},
+{
+"hex": "253cd654af4dfad71427a0aeb3fee9232f8af2211f9ee491c5b10becb5563bfc1e6f93427ecbc8",
+"macro": [
+[
+"text",
+"%<ÖT¯Mú×\u0014' ®³þé#/ò!\u001fäÅ±\u000bìµV;ü\u001eoB~ËÈ"
+]
+]
+},
+{
+"hex": "2955e5cd8e46dc8ed4b7c2764d2a5a4d767706f85d8690024ad6bda3401be9c8",
+"macro": [
+[
+"text",
+")UåÍFÜÔ·ÂvM*ZMvw\u0006ø]"
+],
+[
+"down",
+"KC_HOME"
+],
+[
+"text",
+"Ö½£@\u001béÈ"
+]
+]
+},
+{
+"hex": "ccc935f6cd1f61226ae15338ae1a34014d33ba0d246ac04c81b1",
+"macro": [
+[
+"text",
+"ÌÉ5öÍ\u001fa\"jáS8®\u001a4"
+],
+[
+"tap",
+"KC_END"
+],
+[
+"text",
+"3º\r$jÀL±"
+]
+]
+},
+{
+"hex": "baf23e3bf9eef5f79f2b4934af87f5520b69b94b0d982e85bb55b672a872637acd7466fcb60e0e",
+"macro": [
+[
+"text",
+"ºò>;ùîõ÷+I4¯õR\u000bi¹K\r.»U¶r¨rczÍtfü¶\u000e\u000e"
+]
+]
+},
+{
+"hex": "f18463b0e4b2ba29703474f064ac68f701f5",
+"macro": [
+[
+"text",
+"ñc°ä²º)p4tðd¬h÷"
+],
+[
+"tap",
+"KC_BTN2"
+]
+]
+},
+{
+"hex": "2b3dc666f45bdeaa2ccaedcd2b5157410e4dee4af2b34f",
+"macro": [
+[
+"text",
+"+=Æfô[Þª,ÊíÍ+QWA\u000eMîJò³O"
+]
+]
+},
+{
+"hex": "430a073447de636c0e806c957ba684d6431fb5ead7424d09e15d024c5848f23d1fa6f736",
+"macro": [
+[
+"text",
+"C\n\u00074GÞcl\u000el{¦ÖC\u001fµê×BM\tá]"
+],
+[
+"down",
+"KC_DELETE"
+],
+[
+"text",
+"XHò=\u001f¦÷6"
+]
+]
+},
+{
+"hex": "1d7f618d1532e70e20e2a6668de7f47e8467e546d53ec8e2a1257bdb256c9b3e4fbb4981",
+"macro": [
+[
+"text",
+"\u001da\u00152ç\u000e â¦fçô~gåFÕ>Èâ¡%{Û%l>O»I"
+]
+]
+},
+{
+"hex": "ef7030cbf9537252dc",
+"macro": [
+[
+"text",
+"ïp0ËùSrRÜ"
+]
+]
+},
+{
+"hex": "ceadd764b6a32fbb09adeae109c4a997203975352b878b145c8a42d884cf4cfda7",
+"macro": [
+[
+"text",
+"Î­×d¶£/»\t­êá\tÄ© 9u5+\u0014\\BØÏLý§"
+]
+]
+},
+{
+"hex": "8e1d5dd92589",
+"macro": [
+[
+"text",
+"\u001d]Ù%"
+]
+]
+},
+{
+"hex": "2d85",
+"macro": [
+[
+"text",
+"-"
+]
+]
+},
+{
+"hex": "7122873ee805",
+"macro": [
+[
+"text",
+"q\">è\u0005"
+]
+]
+},
+{
+"hex": "d58942167a385286195c679f9c6994e45b8ab1098012",
+"macro": [
+[
+"text",
+"ÕB\u0016z8R\u0019\\giä[±\t\u0012"
+]
+]
+},
+{
+"hex": "09",
+"macro": [
+[
+"text",
+"\t"
+]
+]
+},
+{
+"hex": "61f37de436ddfdc99d6e75af6547cfb11b42072482dc531c2bc3907c9617eb5e50",
+"macro": [
+[
+"text",
+"aó}ä6ÝýÉnu¯eGÏ±\u001bB\u0007$ÜS\u001c+Ã|\u0017ë^P"
+]
+]
+},
+{
+"hex": "e40186baa8a57d119e6fb65d01abc32af38e",
+"macro": [
+[
+"text",
+"ä"
+],
+[
+"tap",
+"0x86"
+],
+[
+"text",
+"º¨¥}\u0011o¶]"
+],
+[
+"tap",
+"KC_MNXT"
+],
+[
+"text",
+"Ã*ó"
+]
+]
+},
+{
+"hex": "667f022e872d49cc15c90b999b772b4fc7a6fd4c914a16db4708752b0f1544b835",
+"macro": [
+[
+"text",
+"f"
+],
+[
+"down",
+"KC_EQUAL"
+],
+[
+"text",
+"-IÌ\u0015É\u000bw+OÇ¦ýLJ\u0016ÛG\bu+\u000f\u0015D¸5"
+]
+]
+},
+{
+"hex": "e719097dfa8701e9232f21f2812687786976ebfcc327f59317",
+"macro": [
+[
+"text",
+"ç\u0019\t}ú"
+],
+[
+"tap",
+"0xe9"
+],
+[
+"text",
+"#/!ò&xivëüÃ'õ\u0017"
+]
+]
+},
+{
+"hex": "274ba9829b4406f61ff889326f",
+"macro": [
+[
+"text",
+"'K©D\u0006ö\u001fø2o"
+]
+]
+},
+{
+"hex": "9492edeeee3c669f2bf20894ea27e689c66b6b262e4886b8438f39ba76fef8c9",
+"macro": [
+[
+"text",
+"íîî<f+ò\bê'æÆkk&.H¸C9ºvþøÉ"
+]
+]
+},
+{
+"hex": "5101",
+"macro": [
+[
+"text",
+"Q"
+]
+]
+},
+{
+"hex": "e6cf9a48d5b0c0a13da901a6adcb3d64069481be21c9c727b8db8c188f341a92",
+"macro": [
+[
+"text",
+"æÏHÕ°À¡=©"
+],
+[
+"tap",
+"KC_SLEP"
+],
+[
+"text",
+"­Ë=d\u0006¾!ÉÇ'¸Û\u00184\u001a"
+]
+]
+},
+{
+"hex": "7f88dfa161bfdb0ecc68",
+"macro": [
+[
+"text",
+"ß¡a¿Û\u000eÌh"
+]
+]
+},
+{
+"hex": "19d2e64692f8",
+"macro": [
+[
+"text",
+"\u0019ÒæFø"
+]
+]
+},
+{
+"hex": "4157f1d4",
+"macro": [
+[
+"text",
+"AWñÔ"
+]
+]
+},
+{
+"hex": "90988285cf7a9af7c93d5552266afe70e7aae6da4762",
+"macro": [
+[
+"text",
+"Ïz÷É=UR&jþpçªæÚGb"
+]
+]
+},
+{
+"hex": "2e59af2ea37abc84670ad3c4d36bc08a",
+"macro": [
+[
+"text",
+".Y¯.£z¼g\nÓÄÓkÀ"
+]
+]
+},
+{
+"hex": "1fff8eb8406e2f8a7fc4cce4dd9f0b4110d9f2fa0125",
+"macro": [
+[
+"text",
+"\u001fÿ¸@n/ÄÌäÝ\u000bA\u0010Ùòú"
+],
+[
+"tap",
+"KC_8"
+]
+]
+},
+{
+"hex": "efe57f37724f4d37ea2b14014077139b4180df3932249962c685",
+"macro": [
+[
+"text",
+"ïå7rOM7ê+\u0014"
+],
+[
+"tap",
+"KC_F7"
+],
+[
+"text",
+"w\u0013Aß92$bÆ"
+]
+]
+},
+{
+"hex": "01059aeb8ea17cf3787e0ed29d1c0b",
+"macro": [
+[
+"tap",
+"KC_B"
+],
+[
+"text",
+"ë¡|óx~\u000eÒ\u001c\u000b"
+]
+]
+},
+{
+"hex": "ffd7298374d9bd74fc11add7b9",
+"macro": [
+[
+"text",
+"ÿ×)tÙ½tü\u0011­×¹"
+]
+]
+},
+{
+"hex": "6503952269fd669f6376ee71879737fd5f72f8d51c4ac91b6d0c",
+"macro": [
+[
+"text",
+"e"
+],
+[
+"up",
+"0x95"
+],
+[
+"text",
+"\"iýfcvîq7ý_røÕ\u001cJÉ\u001bm\f"
+]
+]
+},
+{
+"hex": "48d41a1e5ec9e6a0392854a8615eef109fc1bfa9e2563701288f29b3d73f6ac2b69edd2c19f264",
+"macro": [
+[
+"text",
+"HÔ\u001a\u001e^Éæ 9(T¨a^ï\u0010Á¿©âV7"
+],
+[
+"tap",
+"KC_ENTER"
+],
+[
+"text",
+")³×?jÂ¶Ý,\u0019òd"
+]
+]
+},
+{
+"hex": "e462a5baf20fd27ecf14c011ed201f836320adb98bab1686",
+"macro": [
+[
+"text",
+"äb¥ºò\u000fÒ~Ï\u0014À\u0011í \u001fc ­¹«\u0016"
+]
+]
+},
+{
+"hex": "8d9801210c7736f3eec580dcfc43fe5d049b4d78a7",
+"macro": [
+[
+"text",
+""
+],
+[
+"tap",
+"KC_4"
+],
+[
+"text",
+"\fw6óîÅÜüCþ]\u0004Mx§"
+]
+]
+},
+{
+"hex": "ebb92865c8517ed02111f6a652da3524872b6a31d7",
+"macro": [
+[
+"text",
+"ë¹(eÈQ~Ð!\u0011ö¦RÚ5$+j1×"
+]
+]
+},
+{
+"hex": "0105007c",
+"macro": [
+[
+"tap",
+"KC_B"
+],
+[
+"text",
+"\u0000|"
+]
+]
+},
+{
+"hex": "010505ff",
+"macro": [
+[
+"tap",
+"KC_B"
+],
+[
+"text",
+"\u0005ÿ"
+]
+]
+},
+{
+"hex": "01040203",
+"macro": [
+[
+"tap",
+"KC_A"
+],
+[
+"down",
+"0x3"
+]
+]
+},
+{
+"hex": "01",
+"macro": []
+},
+{
+"hex": "0101",
+"macro": [
+[
+"tap",
+"KC_TRNS"
+]
+]
+},
+{
+"hex": "0204",
+"macro": [
+[
+"down",
+"KC_A"
+]
+]
+},
+{
+"hex": "01097878",
+"macro": [
+[
+"tap",
+"KC_F"
+],
+[
+"text",
+"xx"
+]
+]
+}
+]
+},
+"6": {
+"serialize": [
+{
+"macro": [
+[
+"text",
+"Hello, world!"
+]
+],
+"hex": "48656c6c6f2c20776f726c6421"
+},
+{
+"macro": [
+[
+"tap",
+"KC_A",
+"KC_B"
+],
+[
+"down",
+"KC_LSHIFT"
+],
+[
+"tap",
+"KC_1"
+],
+[
+"up",
+"KC_LSHIFT"
+]
+],
+"hex": "0101040101050102e101011e0103e1"
+},
+{
+"macro": [
+[
+"tap",
+"LCTL(KC_C)"
+],
+[
+"delay",
+250
+],
+[
+"tap",
+"LCTL(KC_V)"
+]
+],
+"hex": "010506010104fb0101051901"
+},
+{
+"macro": [
+[
+"delay",
+0
+],
+[
+"delay",
+254
+],
+[
+"delay",
+255
+],
+[
+"delay",
+1000
+],
+[
+"delay",
+65000
+]
+],
+"hex": "010401010104ff01010401020104ec040104e7ff"
+},
+{
+"macro": [
+[
+"tap",
+"KC_ENTER",
+"MO(1)",
+"LT1(KC_A)",
+"QK_BOOT",
+"KC_TRNS"
+]
+],
+"hex": "010128010521520105044101057cff010101"
+},
+{
+"macro": [
+[
+"text",
+"Привет"
+],
+[
+"tap",
+"KC_SPACE"
+]
+],
+"hex": "d09fd180d0b8d0b2d0b5d18201012c"
+},
+{
+"macro": [
+[
+"down",
+"KC_LGUI"
+],
+[
+"tap",
+"KC_R"
+],
+[
+"up",
+"KC_LGUI"
+],
+[
+"text",
+"cmd\n"
+]
+],
+"hex": "0102e30101150103e3636d640a"
+}
+],
+"deserialize": [
+{
+"hex": "4dca182530bb1d6d132cded6237b2ed91e3f721fcb",
+"macro": [
+[
+"text",
+"MÊ\u0018%0»\u001dm\u0013,ÞÖ#{.Ù\u001e?r\u001fË"
+]
+]
+},
+{
+"hex": "71174494",
+"macro": [
+[
+"text",
+"q\u0017D"
+]
+]
+},
+{
+"hex": "493c9d5c3460be31201e69fedaa0eee8b9997f5c7c2999fdafe593",
+"macro": [
+[
+"text",
+"I<\\4`¾1 \u001eiþÚ îè¹\\|)ý¯å"
+]
+]
+},
+{
+"hex": "253cd654af4dfad71427a0aeb3fee9232f8af2211f9ee491c5b10becb5563bfc1e6f93427ecbc8",
+"macro": [
+[
+"text",
+"%<ÖT¯Mú×\u0014' ®³þé#/ò!\u001fäÅ±\u000bìµV;ü\u001eoB~ËÈ"
+]
+]
+},
+{
+"hex": "2955e5cd8e46dc8ed4b7c2764d2a5a4d767706f85d8690024ad6bda3401be9c8",
+"macro": [
+[
+"text",
+")UåÍFÜÔ·ÂvM*ZMvw\u0006ø]\u0002JÖ½£@\u001béÈ"
+]
+]
+},
+{
+"hex": "ccc935f6cd1f61226ae15338ae1a34014d33ba0d246ac04c81b1",
+"macro": [
+[
+"text",
+"ÌÉ5öÍ\u001fa\"jáS8®\u001a43º\r$jÀL±"
+]
+]
+},
+{
+"hex": "baf23e3bf9eef5f79f2b4934af87f5520b69b94b0d982e85bb55b672a872637acd7466fcb60e0e",
+"macro": [
+[
+"text",
+"ºò>;ùîõ÷+I4¯õR\u000bi¹K\r.»U¶r¨rczÍtfü¶\u000e\u000e"
+]
+]
+},
+{
+"hex": "f18463b0e4b2ba29703474f064ac68f701f5",
+"macro": [
+[
+"text",
+"ñc°ä²º)p4tðd¬h÷"
+]
+]
+},
+{
+"hex": "2b3dc666f45bdeaa2ccaedcd2b5157410e4dee4af2b34f",
+"macro": [
+[
+"text",
+"+=Æfô[Þª,ÊíÍ+QWA\u000eMîJò³O"
+]
+]
+},
+{
+"hex": "430a073447de636c0e806c957ba684d6431fb5ead7424d09e15d024c5848f23d1fa6f736",
+"macro": [
+[
+"text",
+"C\n\u00074GÞcl\u000el{¦ÖC\u001fµê×BM\tá]\u0002LXHò=\u001f¦÷6"
+]
+]
+},
+{
+"hex": "1d7f618d1532e70e20e2a6668de7f47e8467e546d53ec8e2a1257bdb256c9b3e4fbb4981",
+"macro": [
+[
+"text",
+"\u001da\u00152ç\u000e â¦fçô~gåFÕ>Èâ¡%{Û%l>O»I"
+]
+]
+},
+{
+"hex": "ef7030cbf9537252dc",
+"macro": [
+[
+"text",
+"ïp0ËùSrRÜ"
+]
+]
+},
+{
+"hex": "ceadd764b6a32fbb09adeae109c4a997203975352b878b145c8a42d884cf4cfda7",
+"macro": [
+[
+"text",
+"Î­×d¶£/»\t­êá\tÄ© 9u5+\u0014\\BØÏLý§"
+]
+]
+},
+{
+"hex": "8e1d5dd92589",
+"macro": [
+[
+"text",
+"\u001d]Ù%"
+]
+]
+},
+{
+"hex": "2d85",
+"macro": [
+[
+"text",
+"-"
+]
+]
+},
+{
+"hex": "7122873ee805",
+"macro": [
+[
+"text",
+"q\">è\u0005"
+]
+]
+},
+{
+"hex": "d58942167a385286195c679f9c6994e45b8ab1098012",
+"macro": [
+[
+"text",
+"ÕB\u0016z8R\u0019\\giä[±\t\u0012"
+]
+]
+},
+{
+"hex": "09",
+"macro": [
+[
+"text",
+"\t"
+]
+]
+},
+{
+"hex": "61f37de436ddfdc99d6e75af6547cfb11b42072482dc531c2bc3907c9617eb5e50",
+"macro": [
+[
+"text",
+"aó}ä6ÝýÉnu¯eGÏ±\u001bB\u0007$ÜS\u001c+Ã|\u0017ë^P"
+]
+]
+},
+{
+"hex": "e40186baa8a57d119e6fb65d01abc32af38e",
+"macro": [
+[
+"text",
+"äº¨¥}\u0011o¶]Ã*ó"
+]
+]
+},
+{
+"hex": "667f022e872d49cc15c90b999b772b4fc7a6fd4c914a16db4708752b0f1544b835",
+"macro": [
+[
+"text",
+"f\u0002.-IÌ\u0015É\u000bw+OÇ¦ýLJ\u0016ÛG\bu+\u000f\u0015D¸5"
+]
+]
+},
+{
+"hex": "e719097dfa8701e9232f21f2812687786976ebfcc327f59317",
+"macro": [
+[
+"text",
+"ç\u0019\t}ú#/!ò&xivëüÃ'õ\u0017"
+]
+]
+},
+{
+"hex": "274ba9829b4406f61ff889326f",
+"macro": [
+[
+"text",
+"'K©D\u0006ö\u001fø2o"
+]
+]
+},
+{
+"hex": "9492edeeee3c669f2bf20894ea27e689c66b6b262e4886b8438f39ba76fef8c9",
+"macro": [
+[
+"text",
+"íîî<f+ò\bê'æÆkk&.H¸C9ºvþøÉ"
+]
+]
+},
+{
+"hex": "5101",
+"macro": [
+[
+"text",
+"Q"
+]
+]
+},
+{
+"hex": "e6cf9a48d5b0c0a13da901a6adcb3d64069481be21c9c727b8db8c188f341a92",
+"macro": [
+[
+"text",
+"æÏHÕ°À¡=©­Ë=d\u0006¾!ÉÇ'¸Û\u00184\u001a"
+]
+]
+},
+{
+"hex": "7f88dfa161bfdb0ecc68",
+"macro": [
+[
+"text",
+"ß¡a¿Û\u000eÌh"
+]
+]
+},
+{
+"hex": "19d2e64692f8",
+"macro": [
+[
+"text",
+"\u0019ÒæFø"
+]
+]
+},
+{
+"hex": "4157f1d4",
+"macro": [
+[
+"text",
+"AWñÔ"
+]
+]
+},
+{
+"hex": "90988285cf7a9af7c93d5552266afe70e7aae6da4762",
+"macro": [
+[
+"text",
+"Ïz÷É=UR&jþpçªæÚGb"
+]
+]
+},
+{
+"hex": "2e59af2ea37abc84670ad3c4d36bc08a",
+"macro": [
+[
+"text",
+".Y¯.£z¼g\nÓÄÓkÀ"
+]
+]
+},
+{
+"hex": "1fff8eb8406e2f8a7fc4cce4dd9f0b4110d9f2fa0125",
+"macro": [
+[
+"text",
+"\u001fÿ¸@n/ÄÌäÝ\u000bA\u0010Ùòú"
+]
+]
+},
+{
+"hex": "efe57f37724f4d37ea2b14014077139b4180df3932249962c685",
+"macro": [
+[
+"text",
+"ïå7rOM7ê+\u0014w\u0013Aß92$bÆ"
+]
+]
+},
+{
+"hex": "01059aeb8ea17cf3787e0ed29d1c0b",
+"macro": [
+[
+"tap",
+"0xeb9a"
+],
+[
+"text",
+"¡|óx~\u000eÒ\u001c\u000b"
+]
+]
+},
+{
+"hex": "ffd7298374d9bd74fc11add7b9",
+"macro": [
+[
+"text",
+"ÿ×)tÙ½tü\u0011­×¹"
+]
+]
+},
+{
+"hex": "6503952269fd669f6376ee71879737fd5f72f8d51c4ac91b6d0c",
+"macro": [
+[
+"text",
+"e\u0003\"iýfcvîq7ý_røÕ\u001cJÉ\u001bm\f"
+]
+]
+},
+{
+"hex": "48d41a1e5ec9e6a0392854a8615eef109fc1bfa9e2563701288f29b3d73f6ac2b69edd2c19f264",
+"macro": [
+[
+"text",
+"HÔ\u001a\u001e^Éæ 9(T¨a^ï\u0010Á¿©âV7)³×?jÂ¶Ý,\u0019òd"
+]
+]
+},
+{
+"hex": "e462a5baf20fd27ecf14c011ed201f836320adb98bab1686",
+"macro": [
+[
+"text",
+"äb¥ºò\u000fÒ~Ï\u0014À\u0011í \u001fc ­¹«\u0016"
+]
+]
+},
+{
+"hex": "8d9801210c7736f3eec580dcfc43fe5d049b4d78a7",
+"macro": [
+[
+"text",
+"\fw6óîÅÜüCþ]\u0004Mx§"
+]
+]
+},
+{
+"hex": "ebb92865c8517ed02111f6a652da3524872b6a31d7",
+"macro": [
+[
+"text",
+"ë¹(eÈQ~Ð!\u0011ö¦RÚ5$+j1×"
+]
+]
+},
+{
+"hex": "0105007c",
+"macro": [
+[
+"tap",
+"QK_BOOT"
+]
+]
+},
+{
+"hex": "010505ff",
+"macro": [
+[
+"tap",
+"LCA(KC_NO)"
+]
+]
+},
+{
+"hex": "01040203",
+"macro": [
+[
+"delay",
+511
+]
+]
+},
+{
+"hex": "01",
+"macro": []
+},
+{
+"hex": "0101",
+"macro": []
+},
+{
+"hex": "0204",
+"macro": [
+[
+"text",
+"\u0002\u0004"
+]
+]
+},
+{
+"hex": "01097878",
+"macro": [
+[
+"text",
+"xx"
+]
+]
+}
+]
+}
+}

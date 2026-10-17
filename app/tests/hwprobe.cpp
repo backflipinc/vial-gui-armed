@@ -1,20 +1,18 @@
-// Read-only smoke test against a real keyboard: hwprobe [--all]
+// Read-only smoke test against a real keyboard: hwprobe [file.vil]
 #include "hid/devices.h"
 #include "hid/session.h"
-#include "protocol/armed.h"
-#include "protocol/vial.h"
+#include "model/keyboard.h"
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QTimer>
+#include <QFile>
 
 #include <cstdio>
 
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
+    const QString vilPath = argc > 1 ? QString::fromLocal8Bit(argv[1]) : QString();
     QElapsedTimer t;
     t.start();
     auto devices = hid::discover({});
@@ -26,40 +24,38 @@ int main(int argc, char *argv[])
 
     hid::Session session(devices.first());
     t.restart();
-    session.run(hid::Priority::Interactive, &app, [](hid::Link &link) {
-        QStringList out;
-        int via = vial::viaProtocol(link);
-        auto id = vial::identity(link);
-        QByteArray def = vial::definition(link);
-        auto json = QJsonDocument::fromJson(def).object();
-        int layers = vial::layerCount(link);
-        auto m = json.value("matrix").toObject();
-        int rows = m.value("rows").toInt(), cols = m.value("cols").toInt();
-        QByteArray keymap = vial::keymapBuffer(link, layers * rows * cols * 2);
-        auto macro = vial::macroInfo(link);
-        auto counts = vial::dynamicCounts(link);
-        out << QStringLiteral("via %1, vial %2, id %3").arg(via).arg(id.vialProtocol).arg(id.keyboardId, 16, 16, QLatin1Char('0'));
-        out << QStringLiteral("definition %1 bytes, name %2, %3 layers %4x%5, keymap %6 bytes")
-                   .arg(def.size()).arg(json.value("name").toString()).arg(layers).arg(rows).arg(cols).arg(keymap.size());
-        out << QStringLiteral("macros %1 / %2 bytes, tap dance %3, combos %4, key overrides %5, alt repeat %6")
-                   .arg(macro.count).arg(macro.memory).arg(counts.tapDance).arg(counts.combo)
-                   .arg(counts.keyOverride).arg(counts.altRepeatKey);
-        if (auto info = armed::probe(link, id.vialProtocol, id.keyboardId)) {
-            out << QStringLiteral("qmk-armed %1, features %2, %3 effects, %4 LEDs, %5 values")
-                       .arg(info->versionString()).arg(info->features, 0, 16).arg(info->effects.size())
-                       .arg(info->leds.size()).arg(info->values.size());
-            if (auto clock = armed::clockGet(link))
-                out << QStringLiteral("clock %1").arg(clock->toString(Qt::ISODate));
-        }
-        return out;
-    }, [&](hid::Result<QStringList> r) {
-        if (!r.ok())
+    session.run(hid::Priority::Interactive, &app, [](hid::Link &link) { return loadRaw(link, std::nullopt); },
+                [&](hid::Result<RawKeyboard> r) {
+        if (!r.ok()) {
             std::printf("error: %s\n", qPrintable(r.error));
-        else
-            for (const auto &l : *r.value)
-                std::printf("%s\n", qPrintable(l));
-        std::printf("session: %lld ms\n", t.elapsed());
-        app.exit(r.ok() ? 0 : 1);
+            app.exit(1);
+            return;
+        }
+        std::printf("load: %lld ms\n", t.elapsed());
+        auto state = KeyboardState::fromRaw(*r.value);
+        if (auto *err = std::get_if<QString>(&state)) {
+            std::printf("error: %s\n", qPrintable(*err));
+            app.exit(1);
+            return;
+        }
+        const KeyboardState &kb = std::get<KeyboardState>(state);
+        std::printf("%s: via %d vial %lld, %d layers, %d keys, %d encoders, %d macros, %d/%d/%d/%d dynamic, "
+                    "%d settings, armed %s\n",
+                    qPrintable(kb.def.name), kb.viaProtocol, kb.vialProtocol, kb.layers, int(kb.def.keys.size()),
+                    kb.def.encoderCount, kb.macroInfo.count, int(kb.tapDances.size()), int(kb.combos.size()),
+                    int(kb.keyOverrides.size()), int(kb.altRepeatKeys.size()), int(kb.settings.size()),
+                    kb.armed ? qPrintable(kb.armed->versionString()) : "no");
+        std::printf("layer 0 row 0: ");
+        for (int c = 0; c < kb.def.cols; ++c)
+            std::printf("%s ", qPrintable(kb.key(0, 0, c)));
+        std::printf("\n");
+        if (!vilPath.isEmpty()) {
+            QFile f(vilPath);
+            f.open(QIODevice::WriteOnly);
+            f.write(kb.saveLayout());
+            std::printf("wrote %s\n", qPrintable(vilPath));
+        }
+        app.exit(0);
     });
     return app.exec();
 }

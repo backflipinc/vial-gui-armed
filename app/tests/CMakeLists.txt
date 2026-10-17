@@ -15,6 +15,7 @@ vial_armed_test(tst_vial)
 vial_armed_test(tst_armed)
 vial_armed_test(tst_keycodes)
 vial_armed_test(tst_definition)
+vial_armed_test(tst_macro)
 
 qt_add_executable(hwprobe hwprobe.cpp)
 target_link_libraries(hwprobe PRIVATE vialarmed_core)

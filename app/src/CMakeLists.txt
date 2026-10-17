@@ -25,6 +25,14 @@ add_library(vialarmed_core STATIC
     hid/session.h
     model/definition.cpp
     model/definition.h
+    model/macro.cpp
+    model/macro.h
+    model/dynamic.cpp
+    model/dynamic.h
+    model/keyboard.cpp
+    model/keyboard.h
+    model/qmksettings.cpp
+    model/qmksettings.h
     model/kle.cpp
     model/kle.h
     protocol/armed.cpp
@@ -50,7 +58,7 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
 )
 target_link_libraries(vial-armed PRIVATE vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network)
 
-qt_add_resources(vial-armed resources
+qt_add_resources(vialarmed_core resources
     PREFIX "/"
     BASE ${VIAL_ARMED_PYTHON_ROOT}
     FILES

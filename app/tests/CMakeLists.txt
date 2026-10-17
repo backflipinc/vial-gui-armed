@@ -20,6 +20,7 @@ vial_armed_test(tst_hud)
 vial_armed_test(tst_lighting)
 vial_armed_test(tst_screenmedia)
 vial_armed_test(tst_recorder)
+vial_armed_test(tst_agent)
 target_sources(tst_recorder PRIVATE ${CMAKE_SOURCE_DIR}/src/recorder/macrorecorder.cpp)
 
 qt_add_executable(hwprobe hwprobe.cpp)

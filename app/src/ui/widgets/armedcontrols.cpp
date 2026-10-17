@@ -200,8 +200,14 @@ void Segmented::setLabels(const QStringList &labels)
 
 void Segmented::setCurrent(int index)
 {
-    if (auto *b = group_->button(index))
+    if (auto *b = group_->button(index)) {
         b->setChecked(true);
+    } else if (auto *c = group_->checkedButton()) {
+        // mixed selection: nothing checked
+        group_->setExclusive(false);
+        c->setChecked(false);
+        group_->setExclusive(true);
+    }
 }
 
 int Segmented::current() const

@@ -146,6 +146,12 @@ QSplitter::handle:hover { background: @ACC@; }
 #armedToast[kind="error"] { border-left-color: @WARN@; }
 #armedToast[kind="ok"] { border-left-color: @OK@; }
 #armedBusyBar { background: transparent; }
+#armedKey { color: @MID@; }
+#armedSection { font-family: "@HEAD@"; font-size: 15px; font-weight: bold; color: @MID@; padding-top: 6px; }
+QPushButton#armedTool { padding: 4px 7px; }
+QPushButton#armedSwatch { padding: 0; border: 1px solid @LINE2@; color: @TXT@; }
+QPushButton#armedSwatch:hover { border-color: @MID@; }
+QPushButton#armedSwatch:checked { border: 2px solid @ACC@; }
 )");
     const QList<QPair<QString, QString>> vars = {
         {"MONO", MONO}, {"HEAD", HEAD}, {"BG", css(BG)}, {"PANEL2", css(PANEL2)}, {"PANEL", css(PANEL)},

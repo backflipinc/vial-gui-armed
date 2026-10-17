@@ -38,7 +38,9 @@
 - [ ] «Load dummy JSON» (клавиатура-пустышка для отладки) — не перенесено
 
 ## 6. Страницы Armed
-- [ ] Lighting, Themes, Device, Screen, HUD editor, Animation, HUD agent
+- [x] Lighting (живое превью, темы, полоса), Theme editor, Device, Screen settings, Animation
+- [x] HUD editor: LAYOUT (холст, список, свойства, выравнивание, undo, пресеты = Python, импорт/экспорт, отправка с дебаунсом 120 мс и диффом на потоке устройства) и AGENT
+- [x] HUD agent: в приложении (фоновые задания сессии, пауза на время прошивки) и `--agent` без окна; автозапуск Linux/Windows
 
 ## Оптимизации на потом
 - [ ] Конвейерные запросы при загрузке по USB для qmk-armed (сейчас 1 с, как в Python: упирается в USB)

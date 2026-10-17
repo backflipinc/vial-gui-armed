@@ -450,6 +450,17 @@ QByteArray hudFont(Link &link, int index, const Progress &progress)
     return out;
 }
 
+QByteArray hudFontHead(Link &link, int index)
+{
+    QByteArray m = cmd({SUB_HUD_FONT, index});
+    putLe32(m, 0);
+    m.append(char(HUD_FONT_PAYLOAD));
+    QByteArray d = link.transact(m);
+    if (u8(d, 0) == UNHANDLED)
+        throw Error(QStringLiteral("font %1 read failed").arg(index).toStdString());
+    return d.mid(8, 24);
+}
+
 QByteArray hudRead(Link &link, const HudInfo &info)
 {
     QByteArray out;

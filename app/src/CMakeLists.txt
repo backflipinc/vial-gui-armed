@@ -1,6 +1,8 @@
 configure_file(core/version.h.in ${CMAKE_CURRENT_BINARY_DIR}/generated/core/version.h @ONLY)
 
 add_library(vialarmed_core STATIC
+    agent/hudagent.cpp
+    agent/hudagent.h
     core/appinfo.cpp
     core/appinfo.h
     core/bytes.h
@@ -37,6 +39,8 @@ add_library(vialarmed_core STATIC
     model/qmksettings.h
     model/hud.cpp
     model/hud.h
+    model/hudpresets.cpp
+    model/hudpresets.h
     model/screenmedia.cpp
     model/screenmedia.h
     model/theme.cpp
@@ -65,6 +69,8 @@ endif()
 
 qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     main.cpp
+    app/agenthost.cpp
+    app/agenthost.h
     app/controller.cpp
     app/firmwareflasher.cpp
     app/firmwareflasher.h
@@ -73,6 +79,8 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     app/controller.h
     pages/armeddevice.cpp
     pages/armeddevice.h
+    pages/armedhud.cpp
+    pages/armedhud.h
     pages/armedscreen.cpp
     pages/armedscreen.h
     pages/armedthemes.cpp
@@ -101,6 +109,8 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     ui/keycodedisplay.h
     ui/unlocker.cpp
     ui/unlocker.h
+    ui/widgets/hudcanvas.cpp
+    ui/widgets/hudcanvas.h
     ui/widgets/keyboardview.cpp
     ui/widgets/keyboardview.h
     ui/widgets/keycodepalette.cpp

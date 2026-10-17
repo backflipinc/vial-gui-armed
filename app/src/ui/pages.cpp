@@ -1,6 +1,7 @@
 #include "ui/pages.h"
 
 #include "pages/armeddevice.h"
+#include "pages/armedhud.h"
 #include "pages/armedlighting.h"
 #include "pages/armedscreen.h"
 #include "pages/armedthemes.h"
@@ -11,25 +12,7 @@
 #include "pages/vialpages.h"
 #include "protocol/armed.h"
 
-#include <QLabel>
-#include <QVBoxLayout>
-
-PendingPage::PendingPage(Controller *ctl, const QString &title)
-    : Page(ctl)
-{
-    auto *l = new QVBoxLayout(this);
-    auto *t = new QLabel(tr("%1 is coming in Vial Armed 2.0.\nUntil then, use Vial Armed 1.x for it.").arg(title));
-    t->setObjectName("armedHint");
-    t->setAlignment(Qt::AlignCenter);
-    l->addWidget(t, 1);
-}
-
 namespace {
-
-PageSpec pending(const QString &title)
-{
-    return {title, [title](Controller *c) { return new PendingPage(c, title); }};
-}
 
 bool hasKeyboard(const Controller &c)
 {
@@ -62,7 +45,7 @@ QList<NavEntry> navEntries()
              return kb && ((kb->lighting == "vialrgb" && !armedHas(c, F_RGB_MATRIX)) || kb->lighting.startsWith("qmk_"));
          }, {{"Lighting", [](Controller *c) { return new RgbPage(c); }}}},
         {"Screen", [](const Controller &c) { return armedHas(c, F_SCREEN) || armedHas(c, F_HUD) || armedHas(c, F_DISPLAY); },
-         {{"Settings", [](Controller *c) { return new ScreenSettingsPage(c); }}, pending("HUD editor"),
+         {{"Settings", [](Controller *c) { return new ScreenSettingsPage(c); }}, {"HUD editor", [](Controller *c) { return new HudEditorPage(c); }},
           {"Animation", [](Controller *c) { return new AnimationPage(c); }}}},
         {"Tap Dance", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.tapDance > 0; },
          {{"Tap Dance", [](Controller *c) { return new TapDancePage(c); }}}},

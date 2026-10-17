@@ -1,3 +1,4 @@
+#include "model/hudpresets.h"
 #include "render/hudrender.h"
 
 #include <QFile>
@@ -129,6 +130,23 @@ private slots:
             big.widgets.append(w);
         }
         QVERIFY(std::holds_alternative<QString>(big.pack({})));
+    }
+
+    void presets()
+    {
+        QFile f(QStringLiteral(VIAL_ARMED_TEST_DATA "/hud/presets.json"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const QJsonObject want = QJsonDocument::fromJson(f.readAll()).object();
+        int checked = 0;
+        for (const auto &p : hud::presets()) {
+            if (!p.make)
+                continue;
+            const Layout l = p.make();
+            QVERIFY2(std::holds_alternative<QByteArray>(l.pack({})), qPrintable(p.name));
+            QCOMPARE(QJsonDocument::fromJson(l.toJson()).object(), want.value(p.name).toObject());
+            ++checked;
+        }
+        QCOMPARE(checked, want.size());
     }
 
     void renderSpeed()

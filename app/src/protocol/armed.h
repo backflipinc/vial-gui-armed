@@ -183,6 +183,8 @@ std::optional<HudValue> hudValue(Link &link, int source);
 QList<std::array<quint8, 3>> hudPalette(Link &link, const HudInfo &info);
 // the keyboard's QFF font; pipelined over USB, one by one over the dongle
 QByteArray hudFont(Link &link, int index, const Progress &progress = {});
+// the font's first bytes: enough to tell whether a cached copy is still the same font
+QByteArray hudFontHead(Link &link, int index);
 QByteArray hudRead(Link &link, const HudInfo &info);
 // sends what differs from `previous` (the layout on the keyboard), then shows it
 void hudWrite(Link &link, const QByteArray &blob, const std::optional<QByteArray> &previous);

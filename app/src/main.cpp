@@ -1,4 +1,5 @@
 #include "core/appinfo.h"
+#include "agent/hudagent.h"
 #include "recorder/macrorecorder.h"
 #include "ui/mainwindow.h"
 #include "ui/theme.h"
@@ -14,6 +15,11 @@ int main(int argc, char *argv[])
     // runs as root under pkexec, without a display
     if (argc == 2 && std::strcmp(argv[1], "--linux-recorder") == 0)
         return runLinuxRecorderHelper();
+    if (argc == 2 && std::strcmp(argv[1], "--agent") == 0) {
+        QCoreApplication app(argc, argv);
+        QCoreApplication::setApplicationName(appinfo::kAppName);
+        return agent::runHeadless();
+    }
 
     QApplication app(argc, argv);
     QApplication::setApplicationName(appinfo::kAppName);

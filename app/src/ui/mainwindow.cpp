@@ -1,5 +1,6 @@
 #include "ui/mainwindow.h"
 
+#include "app/agenthost.h"
 #include "core/appinfo.h"
 #include "keycodes/tables.h"
 #include "ui/keycodedisplay.h"
@@ -130,6 +131,7 @@ MainWindow::MainWindow(QWidget *parent)
         });
     }
 
+    AgentHost::instance(&ctl_); // feeds the HUD from start, not only once its page opens
     connect(&ctl_, &Controller::devicesChanged, this, &MainWindow::onDevicesChanged);
     connect(&ctl_, &Controller::stateChanged, this, &MainWindow::onStateChanged);
     connect(&ctl_, &Controller::keyboardChanged, this, &MainWindow::onKeyboardChanged);

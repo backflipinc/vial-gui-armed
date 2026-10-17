@@ -2,9 +2,12 @@ name: App (C++)
 
 on:
   push:
-    paths: ['app/**', 'src/main/icons/**', 'src/main/resources/**', '.github/workflows/app.yml']
+    branches: ['**']
+    # tag pushes ignore the path filter
+    tags: ['v2.*']
+    paths: ['app/**', '.github/workflows/app.yml']
   pull_request:
-    paths: ['app/**', 'src/main/icons/**', 'src/main/resources/**', '.github/workflows/app.yml']
+    paths: ['app/**', '.github/workflows/app.yml']
 
 jobs:
   build:
@@ -29,7 +32,9 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build libudev-dev liblzma-dev libgl1-mesa-dev libxkbcommon-dev
+        sudo apt-get install -y ninja-build libudev-dev liblzma-dev libgl1-mesa-dev libxkbcommon-dev \
+          libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+          libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libfuse2
 
     - uses: jurplel/install-qt-action@v4
       with:
@@ -41,10 +46,62 @@ jobs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then GEN="-G Ninja"; fi
-        cmake -S app -B build $GEN -DCMAKE_BUILD_TYPE=Release
+        cmake -S app -B build $GEN -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+        echo "VERSION=$(cat build/version.txt)" >> "$GITHUB_ENV"
 
     - name: Build
       run: cmake --build build --config Release --parallel
 
     - name: Test
       run: ctest --test-dir build -C Release --output-on-failure
+
+    - name: Package (Linux)
+      if: runner.os == 'Linux'
+      run: app/packaging/linux/package.sh build dist "$VERSION"
+
+    - name: Package (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force dist, deploy | Out-Null
+        Copy-Item build\src\Release\vial-armed.exe deploy\
+        windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw deploy\vial-armed.exe
+        Compress-Archive -Path deploy\* -DestinationPath "dist\vial-armed-$env:VERSION-win.zip"
+        if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+          $env:Path += ";C:\Program Files (x86)\NSIS"
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) { choco install nsis -y --no-progress; $env:Path += ";C:\Program Files (x86)\NSIS" }
+        }
+        makensis /DVERSION=$env:VERSION "/DSRC=$PWD\deploy" "/DOUT=$PWD\dist\vial-armed-$env:VERSION-setup.exe" app\packaging\windows\installer.nsi
+
+    - name: Package (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        mkdir -p dist
+        macdeployqt build/src/vial-armed.app -dmg
+        mv build/src/vial-armed.dmg "dist/vial-armed-$VERSION-mac.dmg"
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: vial-armed-${{ runner.os }}
+        path: |
+          dist/*.AppImage
+          dist/*.deb
+          dist/*.zip
+          dist/*.exe
+          dist/*.dmg
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v2.')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        path: dist
+        merge-multiple: true
+    - uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*
+        generate_release_notes: true

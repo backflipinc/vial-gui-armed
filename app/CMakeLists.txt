@@ -4,6 +4,8 @@ include(cmake/Version.cmake)
 vial_armed_git_version(VIAL_ARMED_VERSION VIAL_ARMED_VERSION_NUMERIC)
 
 project(vial-armed VERSION ${VIAL_ARMED_VERSION_NUMERIC} LANGUAGES C CXX)
+# packaging names its files after this
+file(WRITE ${CMAKE_BINARY_DIR}/version.txt ${VIAL_ARMED_VERSION})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,7 +24,6 @@ qt_standard_project_setup()
 
 include(cmake/Dependencies.cmake)
 
-set(VIAL_ARMED_PYTHON_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../src/main)
 
 add_subdirectory(src)
 

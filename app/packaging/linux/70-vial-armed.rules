@@ -1,0 +1,7 @@
+# Lets the logged-in user open Vial keyboards without root
+# Vial keyboards: their serial number carries the Vial magic
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", TAG+="uaccess"
+# the Vial bootloader, for flashing
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vibl:d4f8159c*", MODE="0660", TAG+="uaccess"
+# IO Type 84 Pro: its 2.4 GHz dongle has no serial
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="fefe", MODE="0660", TAG+="uaccess"

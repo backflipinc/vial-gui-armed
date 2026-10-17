@@ -129,26 +129,67 @@ qt_add_library(vialarmed_ui STATIC
 )
 target_link_libraries(vialarmed_ui PUBLIC vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network)
 
-qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE main.cpp)
+set(VIAL_ARMED_PKG ${CMAKE_CURRENT_SOURCE_DIR}/../packaging)
+if(WIN32)
+    set(app_icon ${VIAL_ARMED_PKG}/windows/vial-armed.rc)
+elseif(APPLE)
+    # an .icns from the PNGs, with iconutil
+    set(iconset ${CMAKE_CURRENT_BINARY_DIR}/vial-armed.iconset)
+    set(app_icon ${CMAKE_CURRENT_BINARY_DIR}/vial-armed.icns)
+    set(icons ${VIAL_ARMED_RES}/icons)
+    add_custom_command(OUTPUT ${app_icon}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${iconset}
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/16.png ${iconset}/icon_16x16.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/32.png ${iconset}/icon_16x16@2x.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/32.png ${iconset}/icon_32x32.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/base/64.png ${iconset}/icon_32x32@2x.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/128.png ${iconset}/icon_128x128.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/256.png ${iconset}/icon_128x128@2x.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/256.png ${iconset}/icon_256x256.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/512.png ${iconset}/icon_256x256@2x.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/512.png ${iconset}/icon_512x512.png
+        COMMAND ${CMAKE_COMMAND} -E copy ${icons}/mac/1024.png ${iconset}/icon_512x512@2x.png
+        COMMAND iconutil -c icns ${iconset} -o ${app_icon}
+        VERBATIM)
+    set_source_files_properties(${app_icon} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+endif()
+qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE main.cpp ${app_icon})
 target_link_libraries(vial-armed PRIVATE vialarmed_ui)
 
-qt_add_resources(vialarmed_core resources
-    PREFIX "/"
-    BASE ${VIAL_ARMED_PYTHON_ROOT}
-    FILES
-        ${VIAL_ARMED_PYTHON_ROOT}/icons/icon.svg
-        ${VIAL_ARMED_PYTHON_ROOT}/resources/base/fonts/Rajdhani-Bold.ttf
-        ${VIAL_ARMED_PYTHON_ROOT}/resources/base/fonts/ShareTechMono-Regular.ttf
-        ${VIAL_ARMED_PYTHON_ROOT}/resources/base/armed/down.svg
-        ${VIAL_ARMED_PYTHON_ROOT}/resources/base/armed/down-small.svg
-        ${VIAL_ARMED_PYTHON_ROOT}/resources/base/armed/up.svg
-        ${VIAL_ARMED_PYTHON_ROOT}/resources/base/qmk_settings.json
-)
+# resource paths are the Python app's, which the code still uses
+set(VIAL_ARMED_RES ${CMAKE_CURRENT_SOURCE_DIR}/../resources)
+set(VIAL_ARMED_RES_FILES
+    icons/icon.svg=icons/icon.svg
+    fonts/Rajdhani-Bold.ttf=resources/base/fonts/Rajdhani-Bold.ttf
+    fonts/ShareTechMono-Regular.ttf=resources/base/fonts/ShareTechMono-Regular.ttf
+    armed/down.svg=resources/base/armed/down.svg
+    armed/down-small.svg=resources/base/armed/down-small.svg
+    armed/up.svg=resources/base/armed/up.svg
+    qmk_settings.json=resources/base/qmk_settings.json)
+set(res_files)
+foreach(pair ${VIAL_ARMED_RES_FILES})
+    string(REPLACE "=" ";" parts ${pair})
+    list(GET parts 0 file)
+    list(GET parts 1 alias)
+    set_source_files_properties(${VIAL_ARMED_RES}/${file} PROPERTIES QT_RESOURCE_ALIAS ${alias})
+    list(APPEND res_files ${VIAL_ARMED_RES}/${file})
+endforeach()
+qt_add_resources(vialarmed_core resources PREFIX "/" FILES ${res_files})
 
 set_target_properties(vial-armed PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Vial Armed"
     MACOSX_BUNDLE_GUI_IDENTIFIER "today.vial.armed"
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    MACOSX_BUNDLE_ICON_FILE vial-armed.icns)
 
 install(TARGETS vial-armed BUNDLE DESTINATION . RUNTIME DESTINATION bin)
+if(UNIX AND NOT APPLE)
+    include(GNUInstallDirs)
+    install(FILES ${VIAL_ARMED_PKG}/linux/vial-armed.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES ${VIAL_ARMED_RES}/icons/icon.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+            RENAME vial-armed.svg)
+    install(FILES ${VIAL_ARMED_RES}/icons/256.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
+            RENAME vial-armed.png)
+    install(FILES ${VIAL_ARMED_PKG}/linux/70-vial-armed.rules DESTINATION lib/udev/rules.d)
+endif()

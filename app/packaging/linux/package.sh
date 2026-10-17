@@ -28,6 +28,9 @@ fetch https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-a
 APPDIR=$OUT/AppDir
 rm -rf "$APPDIR"
 DESTDIR=$APPDIR cmake --install "$BUILD" --prefix /usr
+# only the xcb platform plugin is deployed (XWayland on Wayland desktops), as in Vial Armed 1.x
+mkdir -p "$APPDIR/apprun-hooks"
+printf 'export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"\n' > "$APPDIR/apprun-hooks/vial-armed-xcb.sh"
 export PATH=$TOOLS:$PATH
 export QMAKE=${QMAKE:-$(command -v qmake6 || command -v qmake)}
 export APPIMAGE_EXTRACT_AND_RUN=1 # no FUSE in containers
@@ -38,6 +41,23 @@ linuxdeploy-x86_64.AppImage --appdir "$APPDIR" \
     --desktop-file "$APPDIR/usr/share/applications/vial-armed.desktop" \
     --icon-file "$APPDIR/usr/share/icons/hicolor/256x256/apps/vial-armed.png" \
     --plugin qt
+# plugins the app never uses pull in Qt Quick, Qt PDF and image codecs: drop them, then every library
+# nothing left needs
+rm -f "$APPDIR"/usr/plugins/platforminputcontexts/libqtvirtualkeyboardplugin.so \
+      "$APPDIR"/usr/plugins/imageformats/lib{qpdf,qtiff,qwebp,qtga,qwbmp,qicns}.so
+needed() { readelf -d "$1" 2>/dev/null | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'; }
+keep=$(mktemp)
+{ needed "$APPDIR/usr/bin/vial-armed"; find "$APPDIR/usr/plugins" -name '*.so' | while read -r p; do needed "$p"; done; } | sort -u > "$keep"
+while :; do
+    before=$(wc -l < "$keep")
+    while read -r l; do [ -f "$APPDIR/usr/lib/$l" ] && needed "$APPDIR/usr/lib/$l"; done < "$keep" | cat - "$keep" | sort -u > "$keep.new"
+    mv "$keep.new" "$keep"
+    [ "$(wc -l < "$keep")" = "$before" ] && break
+done
+for f in "$APPDIR"/usr/lib/*.so*; do
+    grep -qxF "$(basename "$f")" "$keep" || rm -f "$f"
+done
+rm -f "$keep"
 # AppRun starts the binary through a symlink in the AppDir root, and Qt looks for qt.conf next to that
 printf '[Paths]\nPrefix = usr\nPlugins = plugins\n' > "$APPDIR/qt.conf"
 linuxdeploy-x86_64.AppImage --appdir "$APPDIR" --output appimage
@@ -52,7 +72,7 @@ mv "$PKG/opt/vial-armed/usr/share/applications" "$PKG/opt/vial-armed/usr/share/i
 mv "$PKG/opt/vial-armed/usr/lib/udev/rules.d/"* "$PKG/usr/lib/udev/rules.d/"
 rm -rf "$PKG/opt/vial-armed/usr/lib/udev"
 # not a symlink: Qt looks for qt.conf next to the path it was started by
-printf '#!/bin/sh\nexec /opt/vial-armed/usr/bin/vial-armed "$@"\n' > "$PKG/usr/bin/vial-armed"
+printf '#!/bin/sh\nexport QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"\nexec /opt/vial-armed/usr/bin/vial-armed "$@"\n' > "$PKG/usr/bin/vial-armed"
 chmod 755 "$PKG/usr/bin/vial-armed"
 SIZE=$(du -sk --exclude=DEBIAN "$PKG" | cut -f1)
 cat > "$PKG/DEBIAN/control" <<EOF

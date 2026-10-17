@@ -586,10 +586,11 @@ bool ThemeRenderer::condition(int cond) const
     if (kind == 0)
         return cond == theme::C_CAPS ? caps : (cond == theme::C_NO_CAPS ? !caps : true);
     int top = layersOn.isEmpty() ? 0 : *std::max_element(layersOn.begin(), layersOn.end());
+    // the active layer, as quantum/armed/armed_theme.c condition()
     if (kind == theme::C_LAYER)
-        return n ? layersOn.contains(n) : top == 0;
+        return top == n;
     if (kind == theme::C_NOT_LAYER)
-        return n ? !layersOn.contains(n) : top != 0;
+        return top != n;
     return true;
 }
 

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- Vial Armed: colours from src/main/python/armed.py -->
+  <!-- Vial Armed: the Armed theme colours -->
   <defs>
     <radialGradient id="glow" cx="128" cy="196" r="120" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#6b4700" stop-opacity="0.55"/>

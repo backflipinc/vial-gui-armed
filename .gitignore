@@ -1,6 +1,3 @@
-venv
-target
-__pycache__
-*.pyc
-.idea
 app/build
+venv
+.idea

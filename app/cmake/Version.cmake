@@ -1,4 +1,4 @@
-# Same rule as util/set_version.py: a tagged commit is the tag (v2.0.0 -> 2.0.0),
+# Same rule as 1.x: a tagged commit is the tag (v2.0.0 -> 2.0.0),
 # otherwise the last tag plus the commit (2.0.0+3.gabc1234).
 function(vial_armed_git_version out_full out_numeric)
     find_package(Git QUIET)

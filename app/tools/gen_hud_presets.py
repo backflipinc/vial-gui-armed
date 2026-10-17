@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-root = os.path.join(os.path.dirname(__file__), "..", "..", "src", "main", "python")
+root = os.path.join(os.environ.get("VIAL_ARMED_1X", os.path.join(os.path.dirname(__file__), "..", "..")), "src", "main", "python")
 sys.path.insert(0, root)
 from hud_presets import PRESETS  # noqa: E402
 

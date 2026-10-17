@@ -7,7 +7,7 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.join(ROOT, "src", "main", "python"))
+sys.path.insert(0, os.path.join(os.environ.get("VIAL_ARMED_1X", ROOT), "src", "main", "python"))
 
 from keycodes import keycodes as K  # noqa: E402
 from keycodes.keycodes_v5 import keycodes_v5  # noqa: E402

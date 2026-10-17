@@ -1,4 +1,5 @@
 #include "core/appinfo.h"
+#include "recorder/macrorecorder.h"
 #include "ui/mainwindow.h"
 #include "ui/theme.h"
 
@@ -6,9 +7,14 @@
 #include <QIcon>
 #include <QTimer>
 #include <cstdio>
+#include <cstring>
 
 int main(int argc, char *argv[])
 {
+    // runs as root under pkexec, without a display
+    if (argc == 2 && std::strcmp(argv[1], "--linux-recorder") == 0)
+        return runLinuxRecorderHelper();
+
     QApplication app(argc, argv);
     QApplication::setApplicationName(appinfo::kAppName);
     QApplication::setApplicationDisplayName(appinfo::kDisplayName);
@@ -18,8 +24,8 @@ int main(int argc, char *argv[])
     QGuiApplication::setDesktopFileName(appinfo::kAppName);
 
     switch (appinfo::modeFromArgs(QApplication::arguments())) {
-    case appinfo::Mode::Agent:
     case appinfo::Mode::LinuxRecorder:
+    case appinfo::Mode::Agent:
         std::fputs("not implemented yet\n", stderr);
         return 2;
     case appinfo::Mode::Window:

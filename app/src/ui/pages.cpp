@@ -2,6 +2,7 @@
 
 #include "pages/keymappage.h"
 #include "pages/layoutpage.h"
+#include "pages/macropage.h"
 #include "protocol/armed.h"
 
 #include <QLabel>
@@ -46,7 +47,7 @@ QList<NavEntry> navEntries()
                  && !c.keyboard()->def.layoutLabels.toArray().isEmpty();
          }, {{"Layout", [](Controller *c) { return new LayoutPage(c); }}}},
         {"Macros", [](const Controller &c) { return c.keyboard() && c.keyboard()->macroInfo.count > 0; },
-         {pending("Macros")}},
+         {{"Macros", [](Controller *c) { return new MacroPage(c); }}}},
         {"Lighting", [](const Controller &c) { return armedHas(c, F_RGB_MATRIX); },
          {pending("Effects"), pending("Theme editor")}},
         {"Lighting", [](const Controller &c) {

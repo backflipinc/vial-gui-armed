@@ -9,6 +9,7 @@
 #include "ui/sidenav.h"
 #include "ui/theme.h"
 #include "ui/toast.h"
+#include "ui/widgets/keybutton.h"
 
 #include <QActionGroup>
 #include <QApplication>
@@ -105,6 +106,8 @@ MainWindow::MainWindow(QWidget *parent)
     pageLayout->setContentsMargins(0, 0, 0, 0);
     pageLayout->addLayout(content);
     content->addWidget(stack_, 1);
+    keycodeTray_ = new KeycodeTray;
+    content->addWidget(keycodeTray_, 1);
     body_->addWidget(pageHost);
     middle->addWidget(body_, 1);
     root->addLayout(middle, 1);
@@ -439,6 +442,8 @@ void MainWindow::onKeyboardChanged()
                 p->deleteLater();
     pages_.clear();
     partOf_.clear();
+    keycodeTray_->close();
+    keycodeTray_->rebuild();
     rebuildNav();
     updateStatus();
 }
@@ -455,6 +460,14 @@ void MainWindow::rebuildNav()
         }
     }
     int row = titles.indexOf(was);
+    // development aid, with VIAL_ARMED_SCREENSHOT: open this page first
+    static QString wanted = qEnvironmentVariable("VIAL_ARMED_PAGE");
+    if (!wanted.isEmpty() && titles.contains(wanted, Qt::CaseInsensitive)) {
+        for (int i = 0; i < titles.size(); ++i)
+            if (titles[i].compare(wanted, Qt::CaseInsensitive) == 0)
+                row = i;
+        wanted.clear();
+    }
     if (row < 0 && !titles.isEmpty())
         row = 0;
     currentEntry_ = -1;
@@ -508,6 +521,7 @@ void MainWindow::showEntry(int visibleIndex, int part)
 
     Page *p = page(entry, part);
     if (p != currentPage_) {
+        keycodeTray_->close();
         if (currentPage_)
             currentPage_->deactivate();
         stack_->setCurrentWidget(p);

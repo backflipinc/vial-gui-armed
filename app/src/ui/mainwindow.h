@@ -18,6 +18,7 @@ class QSystemTrayIcon;
 class QToolButton;
 class SideNav;
 class Toast;
+class KeycodeTray;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -84,6 +85,7 @@ private:
     QLabel *foot_ = nullptr;
     QLabel *footLive_ = nullptr;
     Toast *toast_ = nullptr;
+    KeycodeTray *keycodeTray_ = nullptr;
     QAction *closeToTray_ = nullptr;
     QSystemTrayIcon *tray_ = nullptr;
     bool quitting_ = false;

@@ -69,6 +69,12 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     app/controller.h
     pages/keymappage.cpp
     pages/keymappage.h
+    pages/macropage.cpp
+    pages/macropage.h
+    recorder/macrorecorder.cpp
+    recorder/macrorecorder.h
+    ui/widgets/keybutton.cpp
+    ui/widgets/keybutton.h
     pages/layoutpage.cpp
     pages/layoutpage.h
     ui/anykeycodedialog.cpp

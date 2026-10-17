@@ -43,7 +43,7 @@ EXAMPLE_KEYBOARDS = [
 EXAMPLE_KEYBOARD_PREFIX = 0xA6867BDFD3B00F
 
 
-def hid_send(dev, msg, retries=1, timeout_ms=500, retry_delay=0.5):
+def hid_send(dev, msg, retries=1, timeout_ms=500, retry_delay=0.5, max_timeout_ms=None):
     if len(msg) > MSG_LEN:
         raise RuntimeError("message must be less than 32 bytes")
     msg += b"\x00" * (MSG_LEN - len(msg))
@@ -55,6 +55,8 @@ def hid_send(dev, msg, retries=1, timeout_ms=500, retry_delay=0.5):
         retries -= 1
         if not first:
             time.sleep(retry_delay)
+            if max_timeout_ms:
+                timeout_ms = min(timeout_ms * 2, max_timeout_ms)
         first = False
         try:
             if sys.platform != "emscripten":
@@ -104,8 +106,9 @@ def is_rawhid(desc, quiet):
 
 
 def dongle_send(dev, msg, retries=1):
-    # the radio drops a reply now and then; asking again right away is cheaper than waiting
-    return hid_send(dev, msg, retries=max(retries, 5) * 4, timeout_ms=150, retry_delay=0)
+    # the radio drops a reply now and then, so retry fast; but a busy keyboard answers late, and a fixed short
+    # timeout would pile up repeats of a slow request (each HUD APPLY redraws the screen again)
+    return hid_send(dev, msg, retries=max(retries, 5), timeout_ms=150, retry_delay=0, max_timeout_ms=600)
 
 
 def dongle_has_vial(desc):

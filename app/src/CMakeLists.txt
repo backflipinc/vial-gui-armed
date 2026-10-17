@@ -33,8 +33,12 @@ add_library(vialarmed_core STATIC
     model/keyboard.h
     model/qmksettings.cpp
     model/qmksettings.h
+    model/hud.cpp
+    model/hud.h
     model/kle.cpp
     model/kle.h
+    render/hudrender.cpp
+    render/hudrender.h
     protocol/armed.cpp
     protocol/armed.h
     protocol/vial.cpp

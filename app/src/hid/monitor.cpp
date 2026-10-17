@@ -85,17 +85,31 @@ void DeviceMonitor::refresh()
     }
     running_ = true;
     quint64 gen = ++generation_;
-    auto *watcher = new QFutureWatcher<QList<DeviceInfo>>(this);
-    connect(watcher, &QFutureWatcher<QList<DeviceInfo>>::finished, this, [this, watcher, gen] {
+    using Found = std::pair<QList<DeviceInfo>, bool>;
+    auto *watcher = new QFutureWatcher<Found>(this);
+    connect(watcher, &QFutureWatcher<Found>::finished, this, [this, watcher, gen] {
         watcher->deleteLater();
         running_ = false;
-        apply(watcher->result(), gen);
+        auto [found, unprobed] = watcher->result();
+        apply(found, gen);
+        // wired keyboards show up at once; dongles follow when their probe answers
+        if (unprobed && !paused_ && gen == generation_) {
+            probeNext_ = true;
+            again_ = true;
+        }
         if (again_) {
             again_ = false;
             refresh();
         }
     });
-    watcher->setFuture(QtConcurrent::run([opt = opt_] { return discover(opt); }));
+    DiscoveryOptions opt = opt_;
+    opt.probeDongles = probeNext_;
+    probeNext_ = false;
+    watcher->setFuture(QtConcurrent::run([opt] {
+        bool unprobed = false;
+        auto found = discover(opt, &unprobed);
+        return Found{found, unprobed};
+    }));
 }
 
 void DeviceMonitor::apply(const QList<DeviceInfo> &found, quint64 generation)

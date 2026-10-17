@@ -6,6 +6,7 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QWidget>
 
 #include <memory>
 #include <optional>
@@ -42,6 +43,18 @@ public:
 
     void toast(const QString &text, ToastKind kind = ToastKind::Info) { emit toastRequested(text, kind); }
 
+    // where the unlock dialog opens
+    void setDialogParent(QWidget *w) { dialogParent_ = w; }
+    QWidget *dialogParent() const { return dialogParent_; }
+
+    // Writes to the keyboard. The model changes at once; a failed write puts it back and says why.
+    // needsUnlock: the change involves QK_BOOT (or macros), Vial wants the keyboard unlocked first
+    void write(bool needsUnlock, std::function<void(hid::Link &)> job, std::function<void()> revert = {},
+               std::function<void()> done = {});
+    void setKey(int layer, int row, int col, const QString &code);
+    void setEncoder(int layer, int index, int direction, const QString &code);
+    void setLayoutOptions(quint32 options);
+
 public slots:
     void select(int index);
     void reload();
@@ -53,6 +66,7 @@ signals:
     void devicesChanged();
     void stateChanged();
     void keyboardChanged(); // a keyboard finished loading, or went away
+    void keymapChanged();   // keys, encoders or layout options changed (here or by a revert)
     void lockChanged();
     void busyChanged(bool busy);
     void toastRequested(const QString &text, Controller::ToastKind kind);
@@ -74,4 +88,5 @@ private:
     QJsonObject viaStack_;
     std::optional<QByteArray> sideloadJson_;
     quint64 loadSerial_ = 0;
+    QWidget *dialogParent_ = nullptr;
 };

@@ -31,12 +31,14 @@ struct DiscoveryOptions {
     QSet<quint32> viaStackIds;         // VID << 16 | PID with a downloaded VIA definition
     int sideloadVid = -1, sideloadPid = -1;
     QSet<QByteArray> busyPaths;        // open in a session: present, but don't probe them again
+    bool probeDongles = true;          // false: a dongle counts only if an earlier probe found a keyboard
 };
 
 bool isDongle(quint16 vid, quint16 pid);
 
 // Blocking (a dongle probe can take a second): call it off the GUI thread
-QList<DeviceInfo> discover(const DiscoveryOptions &opt);
+// unprobed: set when probeDongles is off and some dongle still needs asking
+QList<DeviceInfo> discover(const DiscoveryOptions &opt, bool *unprobed = nullptr);
 // abandons dongle probes in progress, for a quick exit
 void cancelDiscovery();
 

@@ -41,6 +41,7 @@ private:
     bool paused_ = false;
     bool running_ = false;
     bool again_ = false;
+    bool probeNext_ = false;
     void *udev_ = nullptr;
     void *udevMonitor_ = nullptr;
 };

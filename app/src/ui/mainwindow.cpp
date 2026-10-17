@@ -4,6 +4,7 @@
 #include "keycodes/keycodes.h"
 #include "keycodes/tables.h"
 #include "model/qmksettings.h"
+#include "ui/keycodedisplay.h"
 #include "ui/pages.h"
 #include "ui/sidenav.h"
 #include "ui/theme.h"
@@ -110,6 +111,7 @@ MainWindow::MainWindow(QWidget *parent)
     root->addWidget(buildFoot());
     setCentralWidget(central);
     toast_ = new Toast(central);
+    ctl_.setDialogParent(this);
 
     connect(nav_, &QListWidget::currentRowChanged, this, [this](int row) {
         if (row >= 0)
@@ -220,6 +222,7 @@ QWidget *MainWindow::buildEmpty()
     emptyText_->setWordWrap(true);
     emptyText_->setTextFormat(Qt::RichText);
     emptyText_->setOpenExternalLinks(true);
+    emptyText_->setMinimumWidth(420);
     emptyText_->setMaximumWidth(620);
     emptyBusy_ = new QProgressBar;
     emptyBusy_->setRange(0, 0);
@@ -272,12 +275,16 @@ void MainWindow::buildMenus()
     QMenu *layout = menuBar()->addMenu(tr("Keyboard layout"));
     auto *group = new QActionGroup(this);
     const QString selected = settings_.value("keymap", "QWERTY").toString();
+    KeycodeDisplay::instance().setKeymap(selected);
     for (const auto &km : keycodes::tables::keymaps()) {
         QAction *a = layout->addAction(QString::fromUtf8(km.title));
         a->setCheckable(true);
         a->setChecked(a->text() == selected);
         group->addAction(a);
-        connect(a, &QAction::triggered, this, [this, a] { settings_.setValue("keymap", a->text()); });
+        connect(a, &QAction::triggered, this, [this, a] {
+            settings_.setValue("keymap", a->text());
+            KeycodeDisplay::instance().setKeymap(a->text());
+        });
     }
 
     QMenu *security = menuBar()->addMenu(tr("Security"));

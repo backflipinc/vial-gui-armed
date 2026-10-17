@@ -25,6 +25,8 @@ add_library(vialarmed_core STATIC
     hid/session.h
     model/definition.cpp
     model/definition.h
+    model/layoutoptions.cpp
+    model/layoutoptions.h
     model/macro.cpp
     model/macro.h
     model/dynamic.cpp
@@ -65,6 +67,20 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     main.cpp
     app/controller.cpp
     app/controller.h
+    pages/keymappage.cpp
+    pages/keymappage.h
+    pages/layoutpage.cpp
+    pages/layoutpage.h
+    ui/anykeycodedialog.cpp
+    ui/anykeycodedialog.h
+    ui/keycodedisplay.cpp
+    ui/keycodedisplay.h
+    ui/unlocker.cpp
+    ui/unlocker.h
+    ui/widgets/keyboardview.cpp
+    ui/widgets/keyboardview.h
+    ui/widgets/keycodepalette.cpp
+    ui/widgets/keycodepalette.h
     ui/mainwindow.cpp
     ui/mainwindow.h
     ui/page.h

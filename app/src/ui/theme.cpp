@@ -116,6 +116,11 @@ QGroupBox::title { subcontrol-origin: margin; left: 8px; color: @MID@; }
 QTableView, QListView, QTreeView { background: @PANEL@; border: 1px solid @LINE@; gridline-color: @LINE@; selection-background-color: @ACC_BG@; selection-color: @ACC@; outline: 0; }
 QHeaderView::section { background: @BG@; color: @MID@; border: 0; border-right: 1px solid @LINE@; border-bottom: 1px solid @LINE@; padding: 4px 8px; }
 
+QSplitter::handle { background: @BG@; }
+QSplitter::handle:vertical { height: 7px; border-top: 3px solid @BG@; border-bottom: 3px solid @BG@; background: @LINE@; }
+QSplitter::handle:horizontal { width: 7px; border-left: 3px solid @BG@; border-right: 3px solid @BG@; background: @LINE@; }
+QSplitter::handle:hover { background: @ACC@; }
+
 #armedTop { background: @BG@; border-bottom: 1px solid @LINE2@; }
 #armedLogo { color: @ACC@; font-family: "@HEAD@"; font-size: 24px; font-weight: bold; }
 #armedLogoSub { color: @MID@; font-family: "@HEAD@"; font-size: 24px; font-weight: bold; }

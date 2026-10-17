@@ -1,6 +1,9 @@
 #pragma once
 
+#include <QByteArray>
+#include <QHash>
 #include <QList>
+#include <QString>
 
 #include <span>
 
@@ -49,5 +52,7 @@ struct KeymapDef {
 const QList<GroupDef> &groups();
 std::span<const RawCode> rawCodes(int protocol);
 const QList<KeymapDef> &keymaps();
+// KLE pictures of keyboards for the keycode palette: ansi_100 ... mods_narrow, labels are keycode names
+const QHash<QString, QByteArray> &displayKeyboards();
 
 }

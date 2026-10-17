@@ -1,5 +1,7 @@
 #include "ui/pages.h"
 
+#include "pages/keymappage.h"
+#include "pages/layoutpage.h"
 #include "protocol/armed.h"
 
 #include <QLabel>
@@ -38,11 +40,11 @@ QList<NavEntry> navEntries()
 {
     using namespace armed;
     return {
-        {"Keymap", hasKeyboard, {pending("Keymap")}},
+        {"Keymap", hasKeyboard, {{"Keymap", [](Controller *c) { return new KeymapPage(c); }}}},
         {"Layout", [](const Controller &c) {
              return c.keyboard() && c.keyboard()->def.layoutLabels.isArray()
                  && !c.keyboard()->def.layoutLabels.toArray().isEmpty();
-         }, {pending("Layout")}},
+         }, {{"Layout", [](Controller *c) { return new LayoutPage(c); }}}},
         {"Macros", [](const Controller &c) { return c.keyboard() && c.keyboard()->macroInfo.count > 0; },
          {pending("Macros")}},
         {"Lighting", [](const Controller &c) { return armedHas(c, F_RGB_MATRIX); },

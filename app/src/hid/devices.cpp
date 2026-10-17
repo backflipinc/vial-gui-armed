@@ -6,6 +6,8 @@
 #include <QLoggingCategory>
 #include <QMutex>
 
+#include <optional>
+
 #include <hidapi.h>
 
 Q_LOGGING_CATEGORY(lcDevices, "armed.devices")
@@ -53,6 +55,15 @@ bool canOpen(const QByteArray &path)
     Q_UNUSED(path);
     return true;
 #endif
+}
+
+std::optional<bool> cachedProbe(const QByteArray &path)
+{
+    QMutexLocker lock(&probeMutex);
+    Probe p = probes.value(path);
+    if (p.ok || (p.at && nowMs() - p.at < kDongleReprobeMs))
+        return p.ok;
+    return std::nullopt;
 }
 
 // the dongle enumerates even when the keyboard is off or runs other firmware, so ask the keyboard
@@ -108,8 +119,10 @@ QString DeviceInfo::title() const
     }
 }
 
-QList<DeviceInfo> discover(const DiscoveryOptions &opt)
+QList<DeviceInfo> discover(const DiscoveryOptions &opt, bool *unprobed)
 {
+    if (unprobed)
+        *unprobed = false;
     QList<DeviceInfo> out;
     hid_device_info *all = hid_enumerate(0, 0);
     for (hid_device_info *d = all; d; d = d->next) {
@@ -134,8 +147,20 @@ QList<DeviceInfo> discover(const DiscoveryOptions &opt)
             info.kind = DeviceKind::Bootloader;
         } else if (isDongle(info.vid, info.pid)) {
             info.kind = DeviceKind::Dongle;
-            if (!isRawHid(d) || (!busy && (!canOpen(info.path) || !dongleHasVial(info.path))))
+            if (!isRawHid(d))
                 continue;
+            if (!busy && !opt.probeDongles) {
+                auto cached = cachedProbe(info.path);
+                if (!cached) {
+                    if (unprobed)
+                        *unprobed = true;
+                    continue;
+                }
+                if (!*cached)
+                    continue;
+            } else if (!busy && (!canOpen(info.path) || !dongleHasVial(info.path))) {
+                continue;
+            }
         } else if (opt.viaStackIds.contains(info.viaId())) {
             info.kind = DeviceKind::ViaStack;
             if (!isRawHid(d) || (!busy && !canOpen(info.path)))

@@ -1,5 +1,8 @@
 #include "app/controller.h"
 
+#include "keycodes/keycodes.h"
+#include "ui/unlocker.h"
+
 #include <QElapsedTimer>
 #include <QJsonDocument>
 #include <QLoggingCategory>
@@ -61,6 +64,11 @@ void Controller::reload()
 void Controller::close()
 {
     ++loadSerial_;
+    if (current_) {
+        auto opts = monitor_.options();
+        opts.busyPaths.clear();
+        monitor_.setOptions(opts);
+    }
     bool had = keyboard_.has_value();
     keyboard_.reset();
     session_.reset();
@@ -180,4 +188,93 @@ void Controller::setBusy(bool busy)
     busy_ = busy;
     monitor_.setPaused(busy);
     emit busyChanged(busy);
+}
+
+void Controller::write(bool needsUnlock, std::function<void(hid::Link &)> job, std::function<void()> revert,
+                       std::function<void()> done)
+{
+    if (!session_)
+        return;
+    const quint64 serial = loadSerial_;
+    auto send = [this, serial, job = std::move(job), revert, done] {
+        if (serial != loadSerial_ || !session_)
+            return;
+        session_->run(hid::Priority::Interactive, this, job, [this, serial, revert, done](hid::Result<hid::Unit> r) {
+            if (serial != loadSerial_)
+                return;
+            if (!r.ok()) {
+                if (revert) {
+                    revert();
+                    emit keymapChanged();
+                }
+                toast(tr("The keyboard did not take the change: %1").arg(r.error), ToastKind::Error);
+            } else if (done) {
+                done();
+            }
+        });
+    };
+    if (!needsUnlock) {
+        send();
+        return;
+    }
+    Unlocker::ensure(this, dialogParent_, [this, send, revert](bool ok) {
+        if (ok) {
+            send();
+        } else if (revert) {
+            revert();
+            emit keymapChanged();
+        }
+    });
+}
+
+void Controller::setKey(int layer, int row, int col, const QString &code)
+{
+    if (!keyboard_)
+        return;
+    const int i = keyboard_->keyIndex(layer, row, col);
+    const QString old = keyboard_->keymap.value(i);
+    if (old == code || old.isNull())
+        return;
+    keyboard_->keymap[i] = code;
+    emit keymapChanged();
+    const quint16 v = quint16(keycodes::Registry::instance().deserialize(code));
+    write(code == QLatin1String(keycodes::kResetKeycode),
+          [=](hid::Link &link) { vial::setKeycode(link, layer, row, col, v); },
+          [this, i, old] {
+              if (keyboard_)
+                  keyboard_->keymap[i] = old;
+          });
+}
+
+void Controller::setEncoder(int layer, int index, int direction, const QString &code)
+{
+    if (!keyboard_)
+        return;
+    const int i = keyboard_->encoderIndex(layer, index, direction);
+    const QString old = keyboard_->encoders.value(i);
+    if (old == code || old.isNull())
+        return;
+    keyboard_->encoders[i] = code;
+    emit keymapChanged();
+    const quint16 v = quint16(keycodes::Registry::instance().deserialize(code));
+    write(code == QLatin1String(keycodes::kResetKeycode),
+          [=](hid::Link &link) { vial::setEncoder(link, layer, index, direction, v); },
+          [this, i, old] {
+              if (keyboard_)
+                  keyboard_->encoders[i] = old;
+          });
+}
+
+void Controller::setLayoutOptions(quint32 options)
+{
+    if (!keyboard_ || keyboard_->layoutOptions < 0 || keyboard_->layoutOptions == qint64(options))
+        return;
+    const qint64 old = keyboard_->layoutOptions;
+    keyboard_->layoutOptions = options;
+    emit keymapChanged();
+    write(false, [options](hid::Link &link) { vial::setLayoutOptions(link, options); },
+          [this, old] {
+              if (keyboard_)
+                  keyboard_->layoutOptions = old;
+          });
 }

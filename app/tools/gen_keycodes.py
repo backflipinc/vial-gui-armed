@@ -13,6 +13,7 @@ from keycodes import keycodes as K  # noqa: E402
 from keycodes.keycodes_v5 import keycodes_v5  # noqa: E402
 from keycodes.keycodes_v6 import keycodes_v6  # noqa: E402
 from keymaps import KEYMAPS  # noqa: E402
+from widgets import display_keyboard_defs as DK  # noqa: E402
 
 OUT = os.path.join(ROOT, "app", "src", "keycodes", "tables_gen.cpp")
 
@@ -107,6 +108,15 @@ def main():
     lines.append("    static const QList<KeymapDef> k = {")
     for i, (title, mapping) in enumerate(KEYMAPS):
         lines.append("        {{{}, kMap{}, {}}},".format(s(title), i, len(mapping)))
+    lines.append("    };")
+    lines.append("    return k;")
+    lines.append("}")
+    lines.append("")
+    lines.append("const QHash<QString, QByteArray> &displayKeyboards()")
+    lines.append("{")
+    lines.append("    static const QHash<QString, QByteArray> k = {")
+    for name in ("ansi_100", "ansi_80", "ansi_70", "iso_100", "iso_80", "iso_70", "mods", "mods_narrow"):
+        lines.append('        {{"{}", QByteArrayLiteral(R"KLE({})KLE")}},'.format(name, getattr(DK, name).strip()))
     lines.append("    };")
     lines.append("    return k;")
     lines.append("}")

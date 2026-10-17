@@ -421,7 +421,7 @@ ThemeEditorPage::ThemeEditorPage(Controller *ctl)
         Layer *l = layer();
         if (updating_ || !l || i < 0 || i >= keysModes_.size() || keysModes_[i] == l->keys)
             return;
-        // the mask keeps what the layer shows: firmware before 1.9.0 and CUSTOM start from it
+        // the mask keeps what the layer shows: firmware before 2.0.0 and CUSTOM start from it
         l->mask = covered(*l);
         l->keys = keysModes_[i];
         l->mask = covered(*l);

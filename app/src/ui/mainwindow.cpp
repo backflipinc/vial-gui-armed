@@ -467,7 +467,7 @@ void MainWindow::rebuildNav()
         for (int i = 0; i < titles.size(); ++i)
             if (titles[i].compare(wantedEntry, Qt::CaseInsensitive) == 0)
                 row = i;
-        const QString part = wanted.section(QLatin1Char('/'), 1);
+        const QString part = wanted.section(QLatin1Char('/'), 1, 1);
         const auto &parts = entries_[visible_[row]].parts;
         for (int p = 0; p < parts.size(); ++p)
             if (!part.isEmpty() && parts[p].title.compare(part, Qt::CaseInsensitive) == 0)

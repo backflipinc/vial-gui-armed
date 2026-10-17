@@ -6,6 +6,7 @@
 
 #include <QApplication>
 #include <QIcon>
+#include <QLocale>
 #include <QTimer>
 #include <cstdio>
 #include <cstring>
@@ -22,6 +23,8 @@ int main(int argc, char *argv[])
     }
 
     QApplication app(argc, argv);
+    // the UI is English, so are its numbers: 1.5 S, not 1,5 S
+    QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));
     QApplication::setApplicationName(appinfo::kAppName);
     QApplication::setApplicationDisplayName(appinfo::kDisplayName);
     QApplication::setOrganizationDomain("vial.today");
@@ -43,11 +46,17 @@ int main(int argc, char *argv[])
 
     MainWindow window;
     window.show();
-    // development aid: VIAL_ARMED_SCREENSHOT=file.png[:delay ms] saves the window and quits
+    // development aid: VIAL_ARMED_SCREENSHOT=file.png[:delay ms[:WxH]] saves the window and quits
     const QString shot = qEnvironmentVariable("VIAL_ARMED_SCREENSHOT");
     if (!shot.isEmpty()) {
         const QStringList parts = shot.split(QLatin1Char(':'));
-        QTimer::singleShot(parts.value(1, "3000").toInt(), &window, [&window, path = parts[0]] {
+        const QStringList size = parts.value(2).split(QLatin1Char('x'));
+        QTimer::singleShot(parts.value(1, "3000").toInt(), &window, [&window, path = parts[0], size] {
+            // the offscreen platform's small screen squeezes the window, so set the size just before the shot
+            if (size.size() == 2) {
+                window.resize(size[0].toInt(), size[1].toInt());
+                QCoreApplication::processEvents();
+            }
             window.grab().save(path);
             window.quit();
         });

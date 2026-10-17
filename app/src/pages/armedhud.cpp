@@ -312,6 +312,11 @@ HudEditorPage::HudEditorPage(Controller *ctl)
         if (i == 0)
             QTimer::singleShot(0, this, &HudEditorPage::fitCanvas);
     });
+    // development aid: VIAL_ARMED_PAGE="Screen/HUD editor/Agent" opens the AGENT view
+    if (qEnvironmentVariable("VIAL_ARMED_PAGE").endsWith(QLatin1String("/Agent"), Qt::CaseInsensitive)) {
+        view_->setCurrent(1);
+        stack_->setCurrentIndex(1);
+    }
 
     // the wheel scrolls the page; it changes a combo box or a number only after a click on it
     for (QWidget *w : stack_->findChildren<QWidget *>()) {

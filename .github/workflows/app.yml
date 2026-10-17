@@ -84,7 +84,8 @@ jobs:
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Force dist, deploy | Out-Null
-        Copy-Item build\src\Release\vial-armed.exe deploy\
+        # Qt puts executables in the build directory's root on Windows
+        Get-ChildItem build -Recurse -Filter vial-armed.exe | Select-Object -First 1 | Copy-Item -Destination deploy\
         windeployqt --release --compiler-runtime --no-translations --no-system-d3d-compiler --no-opengl-sw deploy\vial-armed.exe
         Compress-Archive -Path deploy\* -DestinationPath "dist\vial-armed-$env:VERSION-win.zip"
         if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {

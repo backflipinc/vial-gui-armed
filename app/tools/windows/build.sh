@@ -17,4 +17,15 @@ for t in $(find "$BUILD" -maxdepth 2 -name 'tst_*.exe' | sort); do
     # Wine drops a console program's output: QTest writes it to a file
     if wine "$t" -o "$(winepath -w "$log" 2>/dev/null)",txt > /dev/null 2>&1; then echo "PASS $(basename "$t")"; else echo "FAIL $(basename "$t")"; tail -30 "$log"; failed=1; fi
 done
-exit $failed
+[ $failed = 0 ] || exit 1
+
+# the package step of CI's Windows job: windeployqt, the zip and the installer
+DEPLOY=$BUILD/deploy
+rm -rf "$DEPLOY" && mkdir -p "$DEPLOY"
+cp "$(find "$BUILD" -name vial-armed.exe | head -1)" "$DEPLOY/"
+wine /opt/qt/6.8.3/msvc2022_64/bin/windeployqt.exe --release --no-translations --no-system-d3d-compiler \
+    --no-opengl-sw "$(winepath -w "$DEPLOY/vial-armed.exe")" > "$BUILD/windeployqt.log" 2>&1
+test -f "$DEPLOY/platforms/qwindows.dll"
+command -v makensis > /dev/null || { apt-get update -qq && apt-get install -y -qq nsis > /dev/null; }
+(cd "$SRC/app/packaging/windows" && makensis -V2 -DVERSION=0.0.0 -DSRC="$DEPLOY" -DOUT="$BUILD/vial-armed-setup.exe" installer.nsi)
+ls -l "$BUILD/vial-armed-setup.exe"

@@ -191,12 +191,12 @@ void Controller::setBusy(bool busy)
 }
 
 void Controller::write(bool needsUnlock, std::function<void(hid::Link &)> job, std::function<void()> revert,
-                       std::function<void()> done)
+                       std::function<void()> done, const QString &coalesce)
 {
     if (!session_)
         return;
     const quint64 serial = loadSerial_;
-    auto send = [this, serial, job = std::move(job), revert, done] {
+    auto send = [this, serial, job = std::move(job), revert, done, coalesce] {
         if (serial != loadSerial_ || !session_)
             return;
         session_->run(hid::Priority::Interactive, this, job, [this, serial, revert, done](hid::Result<hid::Unit> r) {
@@ -211,7 +211,7 @@ void Controller::write(bool needsUnlock, std::function<void(hid::Link &)> job, s
             } else if (done) {
                 done();
             }
-        });
+        }, coalesce);
     };
     if (!needsUnlock) {
         send();

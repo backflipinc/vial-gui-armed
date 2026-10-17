@@ -49,8 +49,9 @@ public:
 
     // Writes to the keyboard. The model changes at once; a failed write puts it back and says why.
     // needsUnlock: the change involves QK_BOOT (or macros), Vial wants the keyboard unlocked first
+    // coalesce: writes with the same key replace each other while queued (a spin box being dragged)
     void write(bool needsUnlock, std::function<void(hid::Link &)> job, std::function<void()> revert = {},
-               std::function<void()> done = {});
+               std::function<void()> done = {}, const QString &coalesce = {});
     void setKey(int layer, int row, int col, const QString &code);
     void setEncoder(int layer, int index, int direction, const QString &code);
     void setLayoutOptions(quint32 options);

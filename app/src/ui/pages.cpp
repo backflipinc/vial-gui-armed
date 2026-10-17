@@ -1,5 +1,6 @@
 #include "ui/pages.h"
 
+#include "pages/entrypages.h"
 #include "pages/keymappage.h"
 #include "pages/layoutpage.h"
 #include "pages/macropage.h"
@@ -58,13 +59,13 @@ QList<NavEntry> navEntries()
         {"Screen", [](const Controller &c) { return armedHas(c, F_SCREEN) || armedHas(c, F_HUD) || armedHas(c, F_DISPLAY); },
          {pending("Settings"), pending("HUD editor"), pending("Animation")}},
         {"Tap Dance", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.tapDance > 0; },
-         {pending("Tap Dance")}},
+         {{"Tap Dance", [](Controller *c) { return new TapDancePage(c); }}}},
         {"Combos", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.combo > 0; },
-         {pending("Combos")}},
+         {{"Combos", [](Controller *c) { return new ComboPage(c); }}}},
         {"Key Overrides", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.keyOverride > 0; },
-         {pending("Key Overrides")}},
+         {{"Key Overrides", [](Controller *c) { return new KeyOverridePage(c); }}}},
         {"Alt Repeat Key", [](const Controller &c) { return c.keyboard() && c.keyboard()->dynamicCounts.altRepeatKey > 0; },
-         {pending("Alt Repeat Key")}},
+         {{"Alt Repeat Key", [](Controller *c) { return new AltRepeatKeyPage(c); }}}},
         {"QMK Settings", [](const Controller &c) { return c.keyboard() && !c.keyboard()->settings.isEmpty(); },
          {pending("QMK Settings")}},
         {"Matrix Tester", [](const Controller &c) {

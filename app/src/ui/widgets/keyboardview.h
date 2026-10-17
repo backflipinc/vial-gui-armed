@@ -62,6 +62,7 @@ public:
 
 signals:
     void clicked(int index, bool mask);
+    void keyPressed(int index); // any press on a key, even when selection is off
     void deselected();
     void doubleClicked(int index);
 

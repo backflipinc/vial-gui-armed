@@ -72,6 +72,7 @@ void Controller::close()
     }
     bool had = keyboard_.has_value();
     keyboard_.reset();
+    themes_.reset();
     session_.reset();
     current_.reset();
     unlocked_ = true;
@@ -334,5 +335,76 @@ void Controller::restoreLayout(const QByteArray &vil, std::function<void(bool, c
     }, [this, n, done] {
         emit keyboardChanged();
         done(true, tr("Layout loaded: %1 changes").arg(n));
+    });
+}
+
+int Controller::armedValue(quint8 vid) const
+{
+    return keyboard_ && keyboard_->armed ? keyboard_->armed->values.value(vid, 0) : 0;
+}
+
+void Controller::armedSet(quint8 vid, int value)
+{
+    if (!keyboard_ || !keyboard_->armed)
+        return;
+    keyboard_->armed->values[vid] = quint8(value);
+    write(false, [vid, value](hid::Link &link) { armed::set(link, vid, value); }, {}, {},
+          QStringLiteral("armed-v%1").arg(vid));
+}
+
+void Controller::armedSave()
+{
+    write(false, [](hid::Link &link) { armed::save(link); }, {}, {}, QStringLiteral("armed-save"));
+}
+
+void Controller::armedReload(std::function<void()> done)
+{
+    if (!session_ || !keyboard_ || !keyboard_->armed)
+        return;
+    const quint16 features = keyboard_->armed->features;
+    const quint64 serial = loadSerial_;
+    session_->run(hid::Priority::Interactive, this, [features](hid::Link &link) { return armed::readValues(link, features); },
+                  [this, serial, done](hid::Result<QMap<int, quint8>> r) {
+        if (serial != loadSerial_ || !keyboard_ || !keyboard_->armed)
+            return;
+        if (r.ok()) {
+            keyboard_->armed->values = *r.value;
+            emit armedValuesChanged();
+        }
+        if (done)
+            done();
+    }, QStringLiteral("armed-reload"));
+}
+
+void Controller::loadThemes(std::function<void(bool)> done)
+{
+    if (themes_) {
+        done(true);
+        return;
+    }
+    if (!session_ || !keyboard_ || !keyboard_->armed || !keyboard_->armed->has(armed::F_THEMES)) {
+        done(false);
+        return;
+    }
+    const quint64 serial = loadSerial_;
+    session_->run(hid::Priority::Interactive, this, [](hid::Link &link) {
+        std::pair<std::optional<armed::ThemeInfo>, QList<QByteArray>> out;
+        out.first = armed::themeInfo(link);
+        if (out.first)
+            for (int s = 0; s < out.first->slotCount; ++s)
+                out.second.append(armed::themeRead(link, s, out.first->size));
+        return out;
+    }, [this, serial, done](hid::Result<std::pair<std::optional<armed::ThemeInfo>, QList<QByteArray>>> r) {
+        if (serial != loadSerial_)
+            return;
+        if (!r.ok() || !r.value->first) {
+            done(false);
+            return;
+        }
+        Themes t{*r.value->first, {}};
+        for (const QByteArray &blob : r.value->second)
+            t.list.append(theme::Theme::unpack(blob, t.info.leds, t.info.layers));
+        themes_ = t;
+        done(true);
     });
 }

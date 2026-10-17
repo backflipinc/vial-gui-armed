@@ -261,9 +261,13 @@ std::pair<int, bool> KeyboardView::hit(const QPointF &pos) const
 
 void KeyboardView::mousePressEvent(QMouseEvent *e)
 {
-    if (!isEnabled() || !selectable_)
+    if (!isEnabled())
         return;
     auto [i, mask] = hit(e->position());
+    if (i >= 0)
+        emit keyPressed(i);
+    if (!selectable_)
+        return;
     active_ = i;
     activeMask_ = mask;
     if (i >= 0)

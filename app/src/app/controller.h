@@ -3,6 +3,7 @@
 #include "hid/monitor.h"
 #include "hid/session.h"
 #include "model/keyboard.h"
+#include "model/theme.h"
 
 #include <QObject>
 #include <QPointer>
@@ -55,6 +56,21 @@ public:
     void setKey(int layer, int row, int col, const QString &code);
     void setEncoder(int layer, int index, int direction, const QString &code);
     void setLayoutOptions(quint32 options);
+    // qmk-armed values: the model changes at once, drags send only their last value
+    int armedValue(quint8 vid) const;
+    void armedSet(quint8 vid, int value);
+    void armedSave(); // HSV and speed are applied without EEPROM writes until this
+    void armedReload(std::function<void()> done = {});
+
+    // lighting themes: read once, shared by the Lighting and Theme editor pages
+    struct Themes {
+        armed::ThemeInfo info;
+        QList<theme::Theme> list;
+    };
+    const std::optional<Themes> &themes() const { return themes_; }
+    std::optional<Themes> &themes() { return themes_; }
+    void loadThemes(std::function<void(bool ok)> done);
+
     // a .vil file onto the keyboard; done(ok, message)
     void restoreLayout(const QByteArray &vil, std::function<void(bool, const QString &)> done);
 
@@ -71,6 +87,7 @@ signals:
     void keyboardChanged(); // a keyboard finished loading, or went away
     void keymapChanged();   // keys, encoders or layout options changed (here or by a revert)
     void lockChanged();
+    void armedValuesChanged();
     void busyChanged(bool busy);
     void toastRequested(const QString &text, Controller::ToastKind kind);
 
@@ -92,4 +109,5 @@ private:
     std::optional<QByteArray> sideloadJson_;
     quint64 loadSerial_ = 0;
     QWidget *dialogParent_ = nullptr;
+    std::optional<Themes> themes_;
 };

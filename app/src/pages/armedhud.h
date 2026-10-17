@@ -27,6 +27,7 @@ class QShortcut;
 class QSpinBox;
 class QStackedWidget;
 class Segmented;
+class TestGui;
 
 // Colour roles as swatches in the keyboard's colours; AUTO first when allowed
 class RoleSwatches : public QWidget {
@@ -76,6 +77,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *ev) override;
 
 private:
+    friend class TestGui;
     struct Row {
         QLabel *label;
         QWidget *widget;

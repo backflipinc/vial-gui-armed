@@ -67,8 +67,8 @@ if(VIAL_ARMED_UDEV_FOUND)
     target_link_libraries(vialarmed_core PRIVATE PkgConfig::UDEV)
 endif()
 
-qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
-    main.cpp
+# everything but main(): the app, and the UI tests
+qt_add_library(vialarmed_ui STATIC
     app/agenthost.cpp
     app/agenthost.h
     app/controller.cpp
@@ -127,7 +127,10 @@ qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE
     ui/toast.cpp
     ui/toast.h
 )
-target_link_libraries(vial-armed PRIVATE vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network)
+target_link_libraries(vialarmed_ui PUBLIC vialarmed_core Qt6::Widgets Qt6::Svg Qt6::Network)
+
+qt_add_executable(vial-armed WIN32 MACOSX_BUNDLE main.cpp)
+target_link_libraries(vial-armed PRIVATE vialarmed_ui)
 
 qt_add_resources(vialarmed_core resources
     PREFIX "/"

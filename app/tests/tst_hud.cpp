@@ -132,6 +132,43 @@ private slots:
         QVERIFY(std::holds_alternative<QString>(big.pack({})));
     }
 
+    void packRoundTrip()
+    {
+        Layout l{{
+            {.type = W_TEXT, .x = 8, .y = 3, .w = 50, .label = "IO//84"},
+            {.type = W_BAR, .source = S_HOST, .fg = C_ACCENT, .x = 46, .y = 31, .w = 150, .h = 13, .hi = 100, .warn = 90, .param = 10},
+            {.type = W_TEXT, .source = S_HOST, .x = 200, .y = 30, .w = 48, .label = "{}%"},
+            {.type = W_TEXT, .x = 8, .y = 40, .label = "IO//84"},
+        }};
+        const Sizes sizes{40, 512};
+        const QByteArray blob = std::get<QByteArray>(l.pack(sizes));
+        QCOMPARE(blob.size(), 1476);
+        QCOMPARE(blob.left(3), QByteArray::fromHex("b70104"));
+        QCOMPARE(Layout::unpack(blob, sizes), std::optional(l));
+        // equal labels are stored once
+        QCOMPARE(blob.mid(4 + 22, 2), blob.mid(4 + 3 * 24 + 22, 2));
+    }
+
+    void jsonRoundTrip()
+    {
+        Layout l{{{.type = W_TEXT, .source = S_HOST + 1, .x = 1, .y = 2, .label = "CPU {}%"}}};
+        auto back = Layout::fromJson(l.toJson());
+        QVERIFY(std::holds_alternative<Layout>(back));
+        QCOMPARE(std::get<Layout>(back), l);
+        QVERIFY(std::holds_alternative<QString>(Layout::fromJson("{}")));
+    }
+
+    void unknownRoleDrawsAsText()
+    {
+        Stub stub;
+        auto draw = [&](int fg) {
+            Renderer r(320, 172, fonts, DEFAULT_PALETTE, stub);
+            return r.render(Layout{{{.type = W_FRAME, .fg = fg, .x = 10, .y = 10, .w = 40, .h = 20, .param = FRAME_PANEL}}});
+        };
+        QVERIFY(draw(C_TEXT) != draw(C_ACCENT));
+        QCOMPARE(draw(200), draw(C_TEXT));
+    }
+
     void presets()
     {
         QFile f(QStringLiteral(VIAL_ARMED_TEST_DATA "/hud/presets.json"));

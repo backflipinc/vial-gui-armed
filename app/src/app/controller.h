@@ -24,7 +24,10 @@ public:
     explicit Controller(QObject *parent = nullptr);
     ~Controller() override;
 
-    const QList<hid::DeviceInfo> &devices() const { return monitor_.devices(); }
+    const QList<hid::DeviceInfo> &devices() const { return fakeOpen_ ? fakeDevices_ : monitor_.devices(); }
+    // tests: these devices instead of the system's, opened through `open`
+    using FakeOpen = std::function<std::unique_ptr<hid::RawHid>(const hid::DeviceInfo &)>;
+    void setFakeDevices(const QList<hid::DeviceInfo> &devices, FakeOpen open);
     std::optional<hid::DeviceInfo> current() const;
     State state() const { return state_; }
     QString error() const { return error_; }
@@ -117,5 +120,7 @@ private:
     QWidget *dialogParent_ = nullptr;
     std::optional<Themes> themes_;
     QTimer clockTimer_;
+    QList<hid::DeviceInfo> fakeDevices_;
+    FakeOpen fakeOpen_;
     QString clockStatus_;
 };

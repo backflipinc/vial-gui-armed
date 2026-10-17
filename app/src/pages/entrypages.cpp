@@ -183,7 +183,7 @@ QString TapDancePage::summary(int i) const
     static const char *what[] = {"tap", "hold", "2×tap", "tap+hold"};
     for (int k = 0; k < 4; ++k)
         if (!none(t.keys[size_t(k)]))
-            parts << QStringLiteral("%1 %2").arg(QLatin1String(what[k]), legend(t.keys[size_t(k)]));
+            parts << QStringLiteral("%1 %2").arg(QString::fromUtf8(what[k]), legend(t.keys[size_t(k)]));
     return parts.join(QStringLiteral(" · "));
 }
 

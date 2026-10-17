@@ -33,6 +33,14 @@ void Controller::setState(State s, const QString &error)
     emit stateChanged();
 }
 
+void Controller::setFakeDevices(const QList<hid::DeviceInfo> &devices, FakeOpen open)
+{
+    disconnect(&monitor_, nullptr, this, nullptr);
+    fakeDevices_ = devices;
+    fakeOpen_ = std::move(open);
+    onDevices(devices);
+}
+
 void Controller::onDevices(const QList<hid::DeviceInfo> &devices)
 {
     emit devicesChanged();
@@ -46,7 +54,7 @@ void Controller::onDevices(const QList<hid::DeviceInfo> &devices)
 
 void Controller::select(int index)
 {
-    const auto &list = monitor_.devices();
+    const auto &list = devices();
     if (index < 0 || index >= list.size())
         return;
     if (current_ && *current_ == list[index] && state_ != State::Failed)
@@ -97,7 +105,10 @@ void Controller::open(const hid::DeviceInfo &info)
     opts.busyPaths = {info.path};
     monitor_.setOptions(opts);
 
-    session_ = std::make_unique<hid::Session>(info);
+    if (fakeOpen_)
+        session_ = std::make_unique<hid::Session>(info, [open = fakeOpen_, info] { return open(info); });
+    else
+        session_ = std::make_unique<hid::Session>(info);
     progress_ = info.isDongle() ? tr("READING THE KEYBOARD OVER 2.4 GHZ") : tr("READING THE KEYBOARD");
     setState(State::Connecting);
 

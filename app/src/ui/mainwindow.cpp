@@ -131,7 +131,6 @@ MainWindow::MainWindow(QWidget *parent)
         });
     }
 
-    AgentHost::instance(&ctl_); // feeds the HUD from start, not only once its page opens
     connect(&ctl_, &Controller::devicesChanged, this, &MainWindow::onDevicesChanged);
     connect(&ctl_, &Controller::stateChanged, this, &MainWindow::onStateChanged);
     connect(&ctl_, &Controller::keyboardChanged, this, &MainWindow::onKeyboardChanged);
@@ -155,7 +154,12 @@ MainWindow::MainWindow(QWidget *parent)
         ctl_.setViaStack(via.readAll());
 
     buildMenus();
-    buildTray();
+    // after the first frame (the X server's expose comes back after a zero timer would fire): the HUD agent,
+    // fed from the start rather than once its page opens, and the tray icon
+    QTimer::singleShot(100, this, [this] {
+        AgentHost::instance(&ctl_);
+        buildTray();
+    });
     onStateChanged();
     rebuildNav();
 

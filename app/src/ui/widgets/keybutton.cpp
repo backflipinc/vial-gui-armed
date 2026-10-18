@@ -136,7 +136,6 @@ KeycodeTray *KeycodeTray::instance()
 
 KeycodeTray::KeycodeTray(QWidget *parent)
     : QWidget(parent)
-    , palette_(new KeycodePalette)
 {
     tray = this;
     auto *l = new QVBoxLayout(this);
@@ -151,8 +150,17 @@ KeycodeTray::KeycodeTray(QWidget *parent)
     head->addStretch(1);
     head->addWidget(closeBtn);
     l->addLayout(head);
-    l->addWidget(palette_, 1);
     setMinimumHeight(260);
+    hide();
+}
+
+// built on first use: every keycode button is a lot to make before the window's first frame
+KeycodePalette *KeycodeTray::palette()
+{
+    if (palette_)
+        return palette_;
+    palette_ = new KeycodePalette;
+    static_cast<QVBoxLayout *>(layout())->addWidget(palette_, 1);
     connect(palette_, &KeycodePalette::keycodeSelected, this, [this](const QString &code) {
         if (target_)
             target_->pick(code);
@@ -161,7 +169,7 @@ KeycodeTray::KeycodeTray(QWidget *parent)
         if (target_)
             target_->anyKeycode();
     });
-    hide();
+    return palette_;
 }
 
 KeycodeTray::~KeycodeTray()
@@ -175,7 +183,7 @@ void KeycodeTray::open(KeyButton *target, bool basicOnly)
     if (target_ && target_ != target)
         target_->deselect();
     target_ = target;
-    palette_->setBasicOnly(basicOnly);
+    palette()->setBasicOnly(basicOnly);
     show();
 }
 
@@ -190,7 +198,8 @@ void KeycodeTray::close()
 
 void KeycodeTray::rebuild()
 {
-    palette_->rebuild();
+    if (palette_)
+        palette_->rebuild();
 }
 
 void KeycodeTray::keyPressEvent(QKeyEvent *e)

@@ -54,6 +54,7 @@ protected:
     void keyPressEvent(QKeyEvent *e) override;
 
 private:
-    class KeycodePalette *palette_;
+    class KeycodePalette *palette();
+    class KeycodePalette *palette_ = nullptr;
     KeyButton *target_ = nullptr;
 };

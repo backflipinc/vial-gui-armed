@@ -2,5 +2,6 @@ app/build
 venv
 .idea
 app/build-win
+app/build-*
 /build
 /dist

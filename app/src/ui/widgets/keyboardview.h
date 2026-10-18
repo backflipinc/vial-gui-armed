@@ -26,6 +26,7 @@ public:
         bool masked = false, on = false, pressed = false, active = false;
         QColor color, maskColor;
         std::optional<QColor> glow; // keycap lit by an LED preview
+        bool plain = false;         // an upright rectangle
         // geometry, in unscaled widget units
         double size = 0, shiftX = 0, shiftY = 0, rotX = 0, rotY = 0;
         QRectF rect, rect2, nonmaskRect, maskRect;

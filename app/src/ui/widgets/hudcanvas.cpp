@@ -43,6 +43,9 @@ void HudCanvas::setScale(int s)
 
 void HudCanvas::setContent(const QImage &image, hud::Layout *layout, const QList<std::optional<hud::Box>> &areas)
 {
+    // the editor re-renders every half second; most of the time nothing changed
+    if (layout == layout_ && image == image_ && areas == areas_)
+        return;
     image_ = image;
     layout_ = layout;
     areas_ = areas;
@@ -51,6 +54,8 @@ void HudCanvas::setContent(const QImage &image, hud::Layout *layout, const QList
 
 void HudCanvas::setSelection(const QList<int> &sel)
 {
+    if (sel == sel_)
+        return;
     sel_ = sel;
     update();
 }

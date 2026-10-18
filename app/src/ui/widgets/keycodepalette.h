@@ -3,6 +3,7 @@
 #include "keycodes/keycodes.h"
 #include "model/kle.h"
 
+#include <QHash>
 #include <QWidget>
 
 #include <functional>
@@ -65,6 +66,8 @@ private:
     std::function<bool(const QString &)> filter_;
     QList<Item> items_;
     int hover_ = -1, focus_ = -1;
+    mutable QHash<int, int> heights_; // heightForWidth, asked many times per layout pass
+    void updateItem(int i);
 };
 
 // The keycode picker under the keyboard: tabs of keycodes, and a search across all of them

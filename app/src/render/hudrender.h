@@ -70,6 +70,7 @@ public:
 
 struct Box {
     int x0, y0, x1, y1;
+    bool operator==(const Box &) const = default;
 };
 
 class Renderer {

@@ -148,7 +148,16 @@ int KeycodeGrid::layoutItems(int width, QList<Item> *out) const
 
 int KeycodeGrid::heightForWidth(int w) const
 {
-    return layoutItems(w, nullptr);
+    auto it = heights_.constFind(w);
+    if (it == heights_.constEnd())
+        it = heights_.insert(w, layoutItems(w, nullptr));
+    return *it;
+}
+
+void KeycodeGrid::updateItem(int i)
+{
+    if (i >= 0 && i < items_.size())
+        update(items_[i].rect.adjusted(-3, -3, 3, 3));
 }
 
 QSize KeycodeGrid::sizeHint() const
@@ -158,6 +167,7 @@ QSize KeycodeGrid::sizeHint() const
 
 void KeycodeGrid::relabel()
 {
+    heights_.clear();
     layoutItems(width(), &items_);
     updateGeometry();
     update();
@@ -190,16 +200,17 @@ void KeycodeGrid::mouseMoveEvent(QMouseEvent *e)
 {
     int i = itemAt(e->position().toPoint());
     if (i != hover_) {
+        updateItem(hover_);
+        updateItem(i);
         hover_ = i;
         setCursor(i >= 0 ? Qt::PointingHandCursor : Qt::ArrowCursor);
-        update();
     }
 }
 
 void KeycodeGrid::leaveEvent(QEvent *)
 {
+    updateItem(hover_);
     hover_ = -1;
-    update();
 }
 
 void KeycodeGrid::mousePressEvent(QMouseEvent *e)
@@ -266,6 +277,8 @@ void KeycodeGrid::keyPressEvent(QKeyEvent *e)
 
 bool KeycodeGrid::event(QEvent *e)
 {
+    if (e->type() == QEvent::FontChange)
+        heights_.clear();
     if (e->type() == QEvent::ToolTip) {
         auto *he = static_cast<QHelpEvent *>(e);
         int i = itemAt(he->pos());

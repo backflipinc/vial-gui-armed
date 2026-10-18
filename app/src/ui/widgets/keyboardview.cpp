@@ -107,6 +107,7 @@ void KeyboardView::place(Key &k, double unit, double shiftX, double shiftY) cons
             k.background = k.background.united(p2);
         }
     }
+    k.plain = !k.encoder && !has2 && k.def.geo.rotationAngle == 0;
     k.nonmaskRect = rounded(x, y + k.size * NONMASK_PADDING, w, h * (1 - MASK_HEIGHT));
     k.maskRect = rounded(x + k.size * SIDE_PADDING, y + h * (1 - MASK_HEIGHT), w - 2 * k.size * SIDE_PADDING,
                          h * MASK_HEIGHT - k.size * BOTTOM_PADDING);
@@ -385,10 +386,26 @@ void KeyboardView::paintEvent(QPaintEvent *e)
         const Key &k = visible_[i];
         if (partial && !e->region().intersects(bounds(k)))
             continue;
+        const bool active = k.active || (i == active_ && !activeMask_);
+        // LED previews repaint every key 30 times a second: plain keycaps skip the path machinery
+        if (k.glow && !active && k.plain) {
+            const QColor c = *k.glow;
+            const int lum = std::max({c.red(), c.green(), c.blue()});
+            const QRectF r = k.rect.translated(k.shiftX, k.shiftY);
+            const QRect px(QPoint(int(std::round(r.left() * scale_)), int(std::round(r.top() * scale_))),
+                           QPoint(int(std::round(r.right() * scale_)) - 1, int(std::round(r.bottom() * scale_)) - 1));
+            // pixel-aligned: no antialiasing needed, and filling is several times cheaper without it
+            qp.setRenderHint(QPainter::Antialiasing, false);
+            qp.fillRect(px, lum < 8 ? KEY : QColor(c.red() * 3 / 5, c.green() * 3 / 5, c.blue() * 3 / 5));
+            qp.setPen(lum >= 8 ? c : LINE);
+            qp.setBrush(Qt::NoBrush);
+            qp.drawRect(px.adjusted(0, 0, -1, -1));
+            qp.setRenderHint(QPainter::Antialiasing, true);
+            continue;
+        }
         qp.save();
         transformTo(qp, k);
 
-        const bool active = k.active || (i == active_ && !activeMask_);
         if (k.glow) {
             const QColor c = *k.glow;
             const int lum = std::max({c.red(), c.green(), c.blue()});

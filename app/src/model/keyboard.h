@@ -15,16 +15,21 @@
 
 #include <optional>
 
-// Tap dance, combo, key override and alt repeat key entries: over 2.4 GHz they cost half a connect, so they are
-// read when a page or a .vil save needs them
-enum EntryKinds { TapDanceEntries = 1, ComboEntries = 2, KeyOverrideEntries = 4, AltRepeatKeyEntries = 8, AllEntries = 15 };
-
-struct RawEntries {
-    int kinds = 0; // which lists were read
-    QList<QByteArray> tapDances, combos, keyOverrides, altRepeatKeys;
+// What a connect reads beyond the keymap. The keymap page opens without them; they follow in the background, and
+// the entries (half a connect over 2.4 GHz) only when a page or a .vil file needs them.
+enum Parts {
+    TapDanceEntries = 1,
+    ComboEntries = 2,
+    KeyOverrideEntries = 4,
+    AltRepeatKeyEntries = 8,
+    AllEntries = 15,
+    MacrosPart = 16,
+    SettingsPart = 32,
+    LightingPart = 64,
+    ArmedPart = 128,
+    BackgroundParts = MacrosPart | SettingsPart | LightingPart | ArmedPart,
+    AllParts = 255,
 };
-
-RawEntries loadEntries(hid::Link &link, const vial::DynamicCounts &counts, int kinds);
 
 // What a connect reads from the keyboard, as raw codes: loaded on the device thread (loadRaw), then turned
 // into names on the GUI thread (KeyboardState::fromRaw), where the keycode registry lives.
@@ -38,25 +43,28 @@ struct RawKeyboard {
     QList<QPair<quint16, quint16>> encoders; // [layer * encoderCount + index] = (cw, ccw); missing ones are 0
     std::optional<quint32> layoutOptions;
     vial::MacroInfo macroInfo;
-    QByteArray macros;
     vial::DynamicCounts dynamicCounts;
-    RawEntries entries;
+    QString lighting;
+
+    int parts = 0; // which of the following were read
+    QByteArray macros;
+    QList<QByteArray> tapDances, combos, keyOverrides, altRepeatKeys;
     QSet<quint16> supportedSettings;
     QMap<quint16, QByteArray> settings;
-
-    // lighting
-    QString lighting;
     QMap<int, int> qmkLighting; // value id -> byte(s), e.g. QMK_RGBLIGHT_COLOR -> h | s << 8
     vial::VialRgbInfo vialRgb;
     QSet<quint16> vialRgbEffects;
     vial::VialRgbMode vialRgbMode;
-
     std::optional<armed::Info> armed;
 };
 
 // sideloadJson: the VIA definition to use instead of asking the keyboard for its own
-// entries: EntryKinds to read now (the rest stay unread)
-RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson, int entries = 0);
+// parts: Parts to read now as well
+// definitionCache: a directory keeping keyboard definitions by UID, so a reconnect reads two blocks instead of all
+RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson, int parts = 0,
+                    const QString &definitionCache = {});
+// reads `parts` into `raw`, whose connect fields (protocol, UID, lighting, macro and entry counts) are set
+void loadParts(hid::Link &link, RawKeyboard &raw, int parts);
 
 struct KeyboardState {
     Definition def;
@@ -75,7 +83,7 @@ struct KeyboardState {
     QList<dynamic::Combo> combos;
     QList<dynamic::KeyOverride> keyOverrides;
     QList<dynamic::AltRepeatKey> altRepeatKeys;
-    int entriesLoaded = 0; // EntryKinds
+    int loaded = 0; // Parts
     QSet<quint16> supportedSettings;
     QMap<quint16, quint32> settings;
     QString lighting;
@@ -87,8 +95,8 @@ struct KeyboardState {
 
     // rebuilds the keycode registry for this keyboard, so call it on the GUI thread
     static std::variant<KeyboardState, QString> fromRaw(const RawKeyboard &raw);
-    // fills the lists read later; ones already loaded keep their (possibly edited) entries
-    void applyEntries(const RawEntries &raw);
+    // takes the parts read later; ones already loaded keep their (possibly edited) values
+    void applyParts(const RawKeyboard &raw);
 
     int keyIndex(int layer, int row, int col) const { return (layer * def.rows + row) * def.cols + col; }
     int encoderIndex(int layer, int index, int direction) const
@@ -101,7 +109,7 @@ struct KeyboardState {
         return encoders.value(encoderIndex(layer, index, direction));
     }
 
-    // the .vil layout file; needs all entries loaded
+    // the .vil layout file; needs AllParts loaded
     QByteArray saveLayout() const;
 };
 

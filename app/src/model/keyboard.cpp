@@ -1,38 +1,121 @@
 #include "model/keyboard.h"
 
 #include "core/bytes.h"
+#include "core/lzma.h"
 #include "keycodes/keycodes.h"
 #include "model/macro.h"
 #include "model/qmksettings.h"
 
+#include <QDir>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QSaveFile>
 
 #include <stdexcept>
 
 using keycodes::Registry;
 
-RawEntries loadEntries(hid::Link &link, const vial::DynamicCounts &counts, int kinds)
+namespace {
+
+// the compressed definition as kept by an earlier connect, checked against its size and last block
+QByteArray cachedDefinition(hid::Link &link, quint64 uid, const QString &dir)
 {
-    RawEntries out;
-    out.kinds = kinds & AllEntries;
-    auto read = [&](int kind, quint8 op, int count, int size) {
-        QList<QByteArray> list;
-        if (kinds & kind)
-            for (int i = 0; i < count; ++i)
-                list.append(vial::dynamicEntry(link, op, i, size));
-        return list;
-    };
-    out.tapDances = read(TapDanceEntries, vial::DYNAMIC_VIAL_TAP_DANCE_GET, counts.tapDance, dynamic::TapDance::kSize);
-    out.combos = read(ComboEntries, vial::DYNAMIC_VIAL_COMBO_GET, counts.combo, dynamic::Combo::kSize);
-    out.keyOverrides = read(KeyOverrideEntries, vial::DYNAMIC_VIAL_KEY_OVERRIDE_GET, counts.keyOverride,
-                            dynamic::KeyOverride::kSize);
-    out.altRepeatKeys = read(AltRepeatKeyEntries, vial::DYNAMIC_VIAL_ALT_REPEAT_KEY_GET, counts.altRepeatKey,
-                             dynamic::AltRepeatKey::kSize);
-    return out;
+    const quint32 size = vial::definitionSize(link);
+    if (!size)
+        throw hid::LinkError("the keyboard has no definition");
+    const quint32 last = (size - 1) / hid::kMsgLen;
+    const QByteArray tail = vial::definitionBlock(link, last).left(int(size - last * hid::kMsgLen));
+    const QString path = QStringLiteral("%1/definition-%2-%3.xz").arg(dir).arg(uid, 16, 16, QLatin1Char('0')).arg(size);
+    {
+        QFile f(path);
+        if (f.open(QIODevice::ReadOnly) && f.size() == size) {
+            const QByteArray payload = f.readAll();
+            if (payload.endsWith(tail))
+                if (auto json = lzma::decompress(payload))
+                    return *json;
+        }
+    }
+    QByteArray payload;
+    payload.reserve(int(size));
+    for (quint32 block = 0; block < last; ++block)
+        payload += vial::definitionBlock(link, block);
+    payload += tail;
+    auto json = lzma::decompress(payload);
+    if (!json)
+        throw hid::LinkError("the keyboard definition is corrupt");
+    QDir().mkpath(dir);
+    QSaveFile w(path);
+    if (w.open(QIODevice::WriteOnly) && w.write(payload) == payload.size())
+        w.commit();
+    return *json;
 }
 
-RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson, int entries)
+}
+
+void loadParts(hid::Link &link, RawKeyboard &raw, int parts)
+{
+    parts &= AllParts & ~raw.parts;
+    auto entries = [&](int kind, QList<QByteArray> &list, quint8 op, int count, int size) {
+        if (parts & kind)
+            for (int i = 0; i < count; ++i)
+                list.append(vial::dynamicEntry(link, op, i, size));
+    };
+    const vial::DynamicCounts &counts = raw.dynamicCounts;
+    entries(TapDanceEntries, raw.tapDances, vial::DYNAMIC_VIAL_TAP_DANCE_GET, counts.tapDance, dynamic::TapDance::kSize);
+    entries(ComboEntries, raw.combos, vial::DYNAMIC_VIAL_COMBO_GET, counts.combo, dynamic::Combo::kSize);
+    entries(KeyOverrideEntries, raw.keyOverrides, vial::DYNAMIC_VIAL_KEY_OVERRIDE_GET, counts.keyOverride,
+            dynamic::KeyOverride::kSize);
+    entries(AltRepeatKeyEntries, raw.altRepeatKeys, vial::DYNAMIC_VIAL_ALT_REPEAT_KEY_GET, counts.altRepeatKey,
+            dynamic::AltRepeatKey::kSize);
+
+    if ((parts & MacrosPart) && raw.macroInfo.memory)
+        raw.macros = vial::macroBuffer(link, raw.macroInfo);
+
+    if ((parts & SettingsPart) && raw.vialProtocol >= vial::VIAL_PROTOCOL_QMK_SETTINGS) {
+        raw.supportedSettings = vial::qmkSettingsSupported(link);
+        for (quint16 qsid : std::as_const(raw.supportedSettings)) {
+            if (!qmksettings::Catalog::instance().supported(qsid))
+                continue;
+            if (auto v = vial::qmkSettingGet(link, qsid))
+                raw.settings[qsid] = *v;
+        }
+    }
+
+    if (parts & LightingPart) {
+        const bool rgblight = raw.lighting == QLatin1String("qmk_rgblight")
+            || raw.lighting == QLatin1String("qmk_backlight_rgblight");
+        const bool backlight = raw.lighting == QLatin1String("qmk_backlight")
+            || raw.lighting == QLatin1String("qmk_backlight_rgblight");
+        if (raw.lighting == QLatin1String("vialrgb")) {
+            raw.vialRgb = vial::vialRgbInfo(link);
+            if (raw.vialRgb.version != 1)
+                throw hid::LinkError(QStringLiteral("Unsupported VialRGB protocol (%1), update your Vial version to latest")
+                                         .arg(raw.vialRgb.version).toStdString());
+            raw.vialRgbEffects = vial::vialRgbSupported(link);
+            raw.vialRgbMode = vial::vialRgbMode(link);
+        }
+        auto value = [&](quint8 id) { return bytes::u8(vial::lightingGet(link, bytes::of({id})), 2); };
+        if (rgblight) {
+            for (quint8 id : {vial::QMK_RGBLIGHT_BRIGHTNESS, vial::QMK_RGBLIGHT_EFFECT, vial::QMK_RGBLIGHT_EFFECT_SPEED})
+                raw.qmkLighting[id] = value(id);
+            QByteArray c = vial::lightingGet(link, bytes::of({vial::QMK_RGBLIGHT_COLOR}));
+            raw.qmkLighting[vial::QMK_RGBLIGHT_COLOR] = bytes::u8(c, 2) | bytes::u8(c, 3) << 8;
+        }
+        if (backlight) {
+            for (quint8 id : {vial::QMK_BACKLIGHT_BRIGHTNESS, vial::QMK_BACKLIGHT_EFFECT})
+                raw.qmkLighting[id] = value(id);
+        }
+    }
+
+    if (parts & ArmedPart)
+        raw.armed = armed::probe(link, raw.vialProtocol, raw.keyboardId);
+
+    raw.parts |= parts;
+}
+
+RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson, int parts,
+                    const QString &definitionCache)
 {
     RawKeyboard raw;
     raw.viaProtocol = vial::viaProtocol(link);
@@ -42,7 +125,9 @@ RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJs
         auto id = vial::identity(link);
         raw.vialProtocol = id.vialProtocol;
         raw.keyboardId = id.keyboardId;
-        raw.definitionJson = vial::definition(link);
+        raw.definitionJson = raw.keyboardId && !definitionCache.isEmpty()
+            ? cachedDefinition(link, *raw.keyboardId, definitionCache)
+            : vial::definition(link);
     }
     if (!vial::viaProtocolSupported(raw.viaProtocol) || !vial::vialProtocolSupported(raw.vialProtocol))
         throw std::runtime_error(QStringLiteral("Unsupported protocol version!\nVIA %1, Vial %2: update Vial Armed "
@@ -56,43 +141,7 @@ RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJs
 
     raw.layers = vial::layerCount(link);
     raw.macroInfo = vial::macroInfo(link);
-
     raw.lighting = def.lighting;
-    const bool rgblight = raw.lighting == QLatin1String("qmk_rgblight")
-        || raw.lighting == QLatin1String("qmk_backlight_rgblight");
-    const bool backlight = raw.lighting == QLatin1String("qmk_backlight")
-        || raw.lighting == QLatin1String("qmk_backlight_rgblight");
-    if (raw.lighting == QLatin1String("vialrgb")) {
-        raw.vialRgb = vial::vialRgbInfo(link);
-        if (raw.vialRgb.version != 1)
-            throw std::runtime_error(QStringLiteral("Unsupported VialRGB protocol (%1), update your Vial version to latest")
-                                         .arg(raw.vialRgb.version).toStdString());
-        raw.vialRgbEffects = vial::vialRgbSupported(link);
-        raw.vialRgbMode = vial::vialRgbMode(link);
-    }
-    auto value = [&](quint8 id) { return bytes::u8(vial::lightingGet(link, bytes::of({id})), 2); };
-    if (rgblight) {
-        for (quint8 id : {vial::QMK_RGBLIGHT_BRIGHTNESS, vial::QMK_RGBLIGHT_EFFECT, vial::QMK_RGBLIGHT_EFFECT_SPEED})
-            raw.qmkLighting[id] = value(id);
-        QByteArray c = vial::lightingGet(link, bytes::of({vial::QMK_RGBLIGHT_COLOR}));
-        raw.qmkLighting[vial::QMK_RGBLIGHT_COLOR] = bytes::u8(c, 2) | bytes::u8(c, 3) << 8;
-    }
-    if (backlight) {
-        for (quint8 id : {vial::QMK_BACKLIGHT_BRIGHTNESS, vial::QMK_BACKLIGHT_EFFECT})
-            raw.qmkLighting[id] = value(id);
-    }
-
-    raw.armed = armed::probe(link, raw.vialProtocol, raw.keyboardId);
-
-    if (raw.vialProtocol >= vial::VIAL_PROTOCOL_QMK_SETTINGS) {
-        raw.supportedSettings = vial::qmkSettingsSupported(link);
-        for (quint16 qsid : std::as_const(raw.supportedSettings)) {
-            if (!qmksettings::Catalog::instance().supported(qsid))
-                continue;
-            if (auto v = vial::qmkSettingGet(link, qsid))
-                raw.settings[qsid] = *v;
-        }
-    }
     if (raw.vialProtocol >= vial::VIAL_PROTOCOL_DYNAMIC)
         raw.dynamicCounts = vial::dynamicCounts(link);
 
@@ -104,10 +153,7 @@ RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJs
     if (!def.layoutLabels.isUndefined() && !def.layoutLabels.isNull())
         raw.layoutOptions = vial::layoutOptions(link);
 
-    if (raw.macroInfo.memory)
-        raw.macros = vial::macroBuffer(link, raw.macroInfo);
-
-    raw.entries = loadEntries(link, raw.dynamicCounts, entries);
+    loadParts(link, raw, parts);
     return raw;
 }
 
@@ -124,15 +170,8 @@ std::variant<KeyboardState, QString> KeyboardState::fromRaw(const RawKeyboard &r
     kb.keyboardId = raw.keyboardId;
     kb.layers = raw.layers;
     kb.macroInfo = raw.macroInfo;
-    kb.macros = raw.macros;
     kb.dynamicCounts = raw.dynamicCounts;
-    kb.supportedSettings = raw.supportedSettings;
     kb.lighting = raw.lighting;
-    kb.qmkLighting = raw.qmkLighting;
-    kb.vialRgb = raw.vialRgb;
-    kb.vialRgbEffects = raw.vialRgbEffects;
-    kb.vialRgbMode = raw.vialRgbMode;
-    kb.armed = raw.armed;
     kb.layoutOptions = raw.layoutOptions ? qint64(*raw.layoutOptions) : -1;
 
     if (raw.vialProtocol >= vial::VIAL_PROTOCOL_DYNAMIC) {
@@ -173,26 +212,41 @@ std::variant<KeyboardState, QString> KeyboardState::fromRaw(const RawKeyboard &r
             kb.encoders[kb.encoderIndex(layer, idx, 1)] = reg.serialize(pair.second);
         }
     }
-    kb.applyEntries(raw.entries);
-    for (auto it = raw.settings.begin(); it != raw.settings.end(); ++it)
-        kb.settings[it.key()] = qmksettings::Catalog::instance().deserialize(it.key(), it.value());
+    kb.applyParts(raw);
     return kb;
 }
 
-void KeyboardState::applyEntries(const RawEntries &raw)
+void KeyboardState::applyParts(const RawKeyboard &raw)
 {
-    auto apply = [&](int kind, auto &list, const QList<QByteArray> &blobs, auto unpack) {
-        if (!(raw.kinds & kind) || (entriesLoaded & kind))
+    const int parts = raw.parts & ~loaded;
+    auto entries = [&](int kind, auto &list, const QList<QByteArray> &blobs, auto unpack) {
+        if (!(parts & kind))
             return;
         list.clear();
         for (const auto &e : blobs)
             list.append(unpack(e));
-        entriesLoaded |= kind;
     };
-    apply(TapDanceEntries, tapDances, raw.tapDances, dynamic::TapDance::unpack);
-    apply(ComboEntries, combos, raw.combos, dynamic::Combo::unpack);
-    apply(KeyOverrideEntries, keyOverrides, raw.keyOverrides, dynamic::KeyOverride::unpack);
-    apply(AltRepeatKeyEntries, altRepeatKeys, raw.altRepeatKeys, dynamic::AltRepeatKey::unpack);
+    entries(TapDanceEntries, tapDances, raw.tapDances, dynamic::TapDance::unpack);
+    entries(ComboEntries, combos, raw.combos, dynamic::Combo::unpack);
+    entries(KeyOverrideEntries, keyOverrides, raw.keyOverrides, dynamic::KeyOverride::unpack);
+    entries(AltRepeatKeyEntries, altRepeatKeys, raw.altRepeatKeys, dynamic::AltRepeatKey::unpack);
+    if (parts & MacrosPart)
+        macros = raw.macros;
+    if (parts & SettingsPart) {
+        supportedSettings = raw.supportedSettings;
+        settings.clear();
+        for (auto it = raw.settings.begin(); it != raw.settings.end(); ++it)
+            settings[it.key()] = qmksettings::Catalog::instance().deserialize(it.key(), it.value());
+    }
+    if (parts & LightingPart) {
+        qmkLighting = raw.qmkLighting;
+        vialRgb = raw.vialRgb;
+        vialRgbEffects = raw.vialRgbEffects;
+        vialRgbMode = raw.vialRgbMode;
+    }
+    if (parts & ArmedPart)
+        armed = raw.armed;
+    loaded |= parts;
 }
 
 QByteArray KeyboardState::saveLayout() const

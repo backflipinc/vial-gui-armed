@@ -93,6 +93,9 @@ Identity identity(Link &link);
 QByteArray uid(Link &link);
 // the keyboard's vial.json, decompressed
 QByteArray definition(Link &link);
+// the LZMA-compressed definition's size, and one 32-byte block of it
+quint32 definitionSize(Link &link);
+QByteArray definitionBlock(Link &link, quint32 block);
 int layerCount(Link &link);
 
 QByteArray keymapBuffer(Link &link, int size);

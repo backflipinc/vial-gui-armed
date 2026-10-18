@@ -1,5 +1,6 @@
 #include "app/controller.h"
 
+#include "core/paths.h"
 #include "keycodes/keycodes.h"
 #include "model/qmksettings.h"
 #include "ui/unlocker.h"
@@ -82,6 +83,9 @@ void Controller::close()
     }
     bool had = keyboard_.has_value();
     keyboard_.reset();
+    core_ = {};
+    fetching_ = 0;
+    waiters_.clear();
     themes_.reset();
     clockTimer_.stop();
     clockStatus_.clear();
@@ -122,7 +126,9 @@ void Controller::open(const hid::DeviceInfo &info)
     const quint64 serial = ++loadSerial_;
     auto timer = std::make_shared<QElapsedTimer>();
     timer->start();
-    session_->run(hid::Priority::Interactive, this, [override](hid::Link &link) { return loadRaw(link, override); },
+    const QString cache = paths::configDir() + QStringLiteral("/cache");
+    session_->run(hid::Priority::Interactive, this,
+                  [override, cache](hid::Link &link) { return loadRaw(link, override, 0, cache); },
                   [this, serial, timer](hid::Result<RawKeyboard> r) {
         if (serial != loadSerial_)
             return;
@@ -136,14 +142,14 @@ void Controller::open(const hid::DeviceInfo &info)
             return;
         }
         keyboard_ = std::move(std::get<KeyboardState>(state));
+        core_ = *r.value;
         qCInfo(lcController) << "loaded" << keyboard_->def.name << "in" << timer->elapsed() << "ms";
         setState(State::Ready);
         emit keyboardChanged();
         refreshLock();
-        if (keyboard_->armed && keyboard_->armed->has(armed::F_CLOCK)) {
-            syncClock();
-            clockTimer_.start();
-        }
+        require(BackgroundParts, [this, timer](bool) {
+            qCInfo(lcController) << "background parts in" << timer->elapsed() << "ms";
+        }, hid::Priority::Background);
     });
 }
 
@@ -302,12 +308,12 @@ void Controller::setLayoutOptions(quint32 options)
 
 void Controller::restoreLayout(const QByteArray &vil, std::function<void(bool, const QString &)> done)
 {
-    if (keyboard_ && (keyboard_->entriesLoaded & AllEntries) != AllEntries) {
-        loadEntries(AllEntries, [this, vil, done](bool ok) {
+    if (keyboard_ && (keyboard_->loaded & AllParts) != AllParts) {
+        require(AllParts, [this, vil, done](bool ok) {
             if (ok)
                 restoreLayout(vil, done);
             else
-                done(false, tr("Could not read the keyboard's entries"));
+                done(false, tr("Could not read the keyboard"));
         });
         return;
     }
@@ -437,28 +443,66 @@ void Controller::loadThemes(std::function<void(bool)> done)
     });
 }
 
-void Controller::loadEntries(int kinds, std::function<void(bool)> done)
+void Controller::require(int parts, std::function<void(bool)> done, hid::Priority priority)
 {
+    parts &= AllParts;
     if (!keyboard_ || !session_) {
-        done(false);
+        if (done)
+            done(false);
         return;
     }
-    const int missing = kinds & AllEntries & ~keyboard_->entriesLoaded;
-    if (!missing) {
-        done(true);
+    if (!(parts & ~keyboard_->loaded)) {
+        if (done)
+            done(true);
         return;
     }
-    const vial::DynamicCounts counts = keyboard_->dynamicCounts;
+    if (done)
+        waiters_.append({parts, std::move(done)});
+    fetch(parts & ~keyboard_->loaded, priority);
+}
+
+void Controller::fetch(int parts, hid::Priority priority)
+{
     const quint64 serial = loadSerial_;
-    session_->run(hid::Priority::Interactive, this, [counts, missing](hid::Link &link) {
-        return ::loadEntries(link, counts, missing);
-    }, [this, serial, kinds, done](hid::Result<RawEntries> r) {
-        if (serial != loadSerial_ || !keyboard_)
-            return;
-        if (r.ok())
-            keyboard_->applyEntries(*r.value);
-        done((keyboard_->entriesLoaded & kinds & AllEntries) == (kinds & AllEntries));
-    });
+    for (int part = 1; part <= AllParts; part <<= 1) {
+        if (!(parts & part) || (fetching_ & part))
+            continue;
+        fetching_ |= part;
+        session_->run(priority, this, [raw = core_, part](hid::Link &link) mutable {
+            loadParts(link, raw, part);
+            return raw;
+        }, [this, serial, part](hid::Result<RawKeyboard> r) {
+            if (serial != loadSerial_ || !keyboard_)
+                return;
+            if (r.ok())
+                keyboard_->applyParts(*r.value);
+            else
+                qCWarning(lcController) << "reading part" << part << "failed:" << r.error;
+            partDone(part, r.ok());
+        });
+    }
+}
+
+void Controller::partDone(int part, bool ok)
+{
+    fetching_ &= ~part;
+    if (ok && part == ArmedPart && keyboard_->armed && keyboard_->armed->has(armed::F_CLOCK)) {
+        syncClock();
+        clockTimer_.start();
+    }
+    if (ok)
+        emit partsLoaded(part);
+    // a waiter is done when nothing it needs is still being read
+    QList<Waiter> ready;
+    for (int i = 0; i < waiters_.size();) {
+        if (waiters_[i].parts & fetching_ & ~keyboard_->loaded) {
+            ++i;
+            continue;
+        }
+        ready.append(waiters_.takeAt(i));
+    }
+    for (const Waiter &w : ready)
+        w.done(!(w.parts & ~keyboard_->loaded));
 }
 
 void Controller::syncClock()

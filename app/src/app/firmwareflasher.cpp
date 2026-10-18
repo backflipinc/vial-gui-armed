@@ -85,7 +85,7 @@ void FirmwareFlasher::start(const QByteArray &firmware, bool restore)
         return;
     }
     log(tr("Backing up current layout..."));
-    ctl_->loadEntries(AllEntries, [this](bool ok) {
+    ctl_->require(AllParts, [this](bool ok) {
         const KeyboardState *kb = ctl_->keyboard();
         if (!ok || !kb) {
             finish(false, tr("Error: could not read the current layout"));

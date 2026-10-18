@@ -35,14 +35,17 @@ QList<NavEntry> navEntries()
              return c.keyboard() && c.keyboard()->def.layoutLabels.isArray()
                  && !c.keyboard()->def.layoutLabels.toArray().isEmpty();
          }, {{"Layout", [](Controller *c) { return new LayoutPage(c); }}}},
-        {"Macros", [](const Controller &c) { return c.keyboard() && c.keyboard()->macroInfo.count > 0; },
+        {"Macros", [](const Controller &c) {
+             return c.keyboard() && c.keyboard()->macroInfo.count > 0 && (c.keyboard()->loaded & MacrosPart);
+         },
          {{"Macros", [](Controller *c) { return new MacroPage(c); }}}},
         {"Lighting", [](const Controller &c) { return armedHas(c, F_RGB_MATRIX); },
          {{"Effects", [](Controller *c) { return new ArmedLightingPage(c); }},
           {"Theme editor", [](Controller *c) { return new ThemeEditorPage(c); }}}},
         {"Lighting", [](const Controller &c) {
              const KeyboardState *kb = c.keyboard();
-             return kb && ((kb->lighting == "vialrgb" && !armedHas(c, F_RGB_MATRIX)) || kb->lighting.startsWith("qmk_"));
+             return kb && (kb->loaded & LightingPart) && (kb->loaded & ArmedPart)
+                 && ((kb->lighting == "vialrgb" && !armedHas(c, F_RGB_MATRIX)) || kb->lighting.startsWith("qmk_"));
          }, {{"Lighting", [](Controller *c) { return new RgbPage(c); }}}},
         {"Screen", [](const Controller &c) { return armedHas(c, F_SCREEN) || armedHas(c, F_HUD) || armedHas(c, F_DISPLAY); },
          {{"Settings", [](Controller *c) { return new ScreenSettingsPage(c); }}, {"HUD editor", [](Controller *c) { return new HudEditorPage(c); }},

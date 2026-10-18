@@ -28,6 +28,10 @@ AgentHost::AgentHost(Controller *ctl)
 {
     lock_.setStaleLockTime(0);
     connect(ctl, &Controller::keyboardChanged, this, &AgentHost::onKeyboard);
+    connect(ctl, &Controller::partsLoaded, this, [this](int parts) {
+        if (parts & ArmedPart)
+            onKeyboard();
+    });
     connect(ctl, &Controller::busyChanged, this, [this] {
         attach();
         emit changed();

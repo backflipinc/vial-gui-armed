@@ -1,5 +1,7 @@
 // Where a connect's time goes: reads the first keyboard found the way the app does, counting requests and
-// round-trip time per command. --entries also reads the tap dance / combo / key override / alt repeat key lists.
+// round-trip time per command. --entries also reads the tap dance / combo / key override / alt repeat key lists,
+// --cache uses the app's definition cache.
+#include "core/paths.h"
 #include "hid/devices.h"
 #include "hid/link.h"
 #include "model/keyboard.h"
@@ -73,11 +75,16 @@ int main(int argc, char *argv[])
     std::printf("%s\n", qPrintable(d.title()));
     hid::Link link(std::make_unique<Counting>(hid::HidapiDevice::open(d.path)), d.isDongle());
     clk.start();
-    loadRaw(link, std::nullopt, entries ? AllEntries : 0);
+    const QString cache = app.arguments().contains(QLatin1String("--cache"))
+        ? paths::configDir() + QStringLiteral("/cache") : QString();
+    RawKeyboard raw = loadRaw(link, std::nullopt, 0, cache);
+    const qint64 keymap = clk.elapsed();
+    loadParts(link, raw, entries ? AllParts : BackgroundParts);
     const qint64 total = clk.elapsed();
     int n = 0;
     for (const Stat &s : std::as_const(stats))
         n += s.n;
+    std::printf("keymap after %lld ms\n", keymap);
     std::printf("load %lld ms, %d requests, %.1f ms per request\n", total, n, double(total) / std::max(n, 1));
     QList<std::pair<qint64, QString>> order;
     for (auto it = stats.begin(); it != stats.end(); ++it)

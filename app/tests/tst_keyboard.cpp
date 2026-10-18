@@ -3,6 +3,7 @@
 #include "model/keyboard.h"
 #include "virtualkeyboard.h"
 
+#include <QTemporaryDir>
 #include <QTest>
 
 // test_keyboard.py: loading, changing keys and encoders, a layout file there and back
@@ -23,7 +24,7 @@ struct Rig {
     }
     void load()
     {
-        auto st = KeyboardState::fromRaw(loadRaw(link, std::nullopt, AllEntries));
+        auto st = KeyboardState::fromRaw(loadRaw(link, std::nullopt, AllParts));
         QVERIFY2(std::holds_alternative<KeyboardState>(st), qPrintable(std::get_if<QString>(&st) ? *std::get_if<QString>(&st) : ""));
         kb = std::get<KeyboardState>(st);
     }
@@ -49,6 +50,31 @@ class TestKeyboard : public QObject {
     Q_OBJECT
 
 private slots:
+    void definitionCache()
+    {
+        QTemporaryDir dir;
+        auto definitionReads = [](const VirtualKeyboard &vk) {
+            int n = 0;
+            for (const QByteArray &q : vk.requests())
+                n += quint8(q[0]) == 0xFE && quint8(q[1]) == vial::CMD_VIAL_GET_DEFINITION;
+            return n;
+        };
+        Rig first(LAYOUT_2x2, 2, 2, 2);
+        const RawKeyboard a = loadRaw(first.link, std::nullopt, 0, dir.path());
+        const int blocks = definitionReads(first.vk);
+        QVERIFY(blocks > 1);
+        Rig again(LAYOUT_2x2, 2, 2, 2);
+        const RawKeyboard b = loadRaw(again.link, std::nullopt, 0, dir.path());
+        QCOMPARE(definitionReads(again.vk), 1);
+        QCOMPARE(b.definitionJson, a.definitionJson);
+
+        // another definition under the same UID is read in full
+        Rig changed(LAYOUT_ENCODER, 1, 1, 2, 1);
+        const RawKeyboard c = loadRaw(changed.link, std::nullopt, 0, dir.path());
+        QVERIFY(definitionReads(changed.vk) > 1);
+        QVERIFY(c.definitionJson != a.definitionJson);
+    }
+
     void connectSkipsEntries()
     {
         Rig rig(LAYOUT_2x2, 2, 2, 2);
@@ -66,19 +92,24 @@ private slots:
             return n;
         };
         QCOMPARE(entryReads(), 0);
-        QCOMPARE(kb.entriesLoaded, 0);
+        QCOMPARE(kb.loaded, 0);
         QCOMPARE(kb.dynamicCounts.tapDance, 2);
 
-        kb.applyEntries(loadEntries(rig.link, kb.dynamicCounts, ComboEntries));
+        RawKeyboard core = loadRaw(rig.link, std::nullopt);
+        RawKeyboard combos = core;
+        loadParts(rig.link, combos, ComboEntries);
+        kb.applyParts(combos);
         QCOMPARE(entryReads(), 1);
-        QCOMPARE(kb.entriesLoaded, int(ComboEntries));
+        QCOMPARE(kb.loaded, int(ComboEntries));
         QCOMPARE(kb.combos.size(), 1);
         QVERIFY(kb.tapDances.isEmpty());
 
         // an edited list is not replaced by a later read
         kb.combos[0].output = QStringLiteral("KC_X");
-        kb.applyEntries(loadEntries(rig.link, kb.dynamicCounts, AllEntries));
-        QCOMPARE(kb.entriesLoaded, int(AllEntries));
+        RawKeyboard all = core;
+        loadParts(rig.link, all, AllParts);
+        kb.applyParts(all);
+        QCOMPARE(kb.loaded, int(AllParts));
         QCOMPARE(kb.combos[0].output, QStringLiteral("KC_X"));
         QCOMPARE(kb.tapDances.size(), 2);
     }

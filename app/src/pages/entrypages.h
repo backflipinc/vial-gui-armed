@@ -16,7 +16,7 @@ public:
     void keyboardChanged() override;
 
 protected:
-    virtual int kind() const = 0; // EntryKinds
+    virtual int kind() const = 0; // Parts
     virtual int count() const = 0;
     virtual QString summary(int index) const = 0;
     virtual QWidget *editor(int index) = 0;

@@ -75,8 +75,9 @@ public:
     std::optional<Themes> &themes() { return themes_; }
     void loadThemes(std::function<void(bool ok)> done);
 
-    // tap dance / combo / key override / alt repeat key lists (EntryKinds), read the first time they are needed
-    void loadEntries(int kinds, std::function<void(bool ok)> done);
+    // Parts of the keyboard read after the keymap: done(ok) once all of them are in. A connect fetches
+    // BackgroundParts by itself; entries are read the first time something requires them.
+    void require(int parts, std::function<void(bool ok)> done, hid::Priority priority = hid::Priority::Interactive);
 
     // the keyboard's clock follows this computer's: on connect and every ten minutes
     void syncClock();
@@ -97,6 +98,7 @@ signals:
     void stateChanged();
     void keyboardChanged(); // a keyboard finished loading, or went away
     void keymapChanged();   // keys, encoders or layout options changed (here or by a revert)
+    void partsLoaded(int parts); // more of the keyboard was read (Parts)
     void lockChanged();
     void armedValuesChanged();
     void clockSynced();
@@ -108,11 +110,20 @@ private:
     void open(const hid::DeviceInfo &info);
     void close();
     void setState(State s, const QString &error = {});
+    void fetch(int parts, hid::Priority priority);
+    void partDone(int part, bool ok);
 
     hid::DeviceMonitor monitor_;
     std::unique_ptr<hid::Session> session_;
     std::optional<hid::DeviceInfo> current_;
     std::optional<KeyboardState> keyboard_;
+    RawKeyboard core_; // what the connect read, to read the parts from
+    int fetching_ = 0; // Parts being read; a failed one is read again when required again
+    struct Waiter {
+        int parts;
+        std::function<void(bool)> done;
+    };
+    QList<Waiter> waiters_;
     State state_ = State::NoDevice;
     QString error_, progress_;
     bool unlocked_ = true;

@@ -135,6 +135,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&ctl_, &Controller::devicesChanged, this, &MainWindow::onDevicesChanged);
     connect(&ctl_, &Controller::stateChanged, this, &MainWindow::onStateChanged);
     connect(&ctl_, &Controller::keyboardChanged, this, &MainWindow::onKeyboardChanged);
+    // pages for the parts read after the keymap show up as they arrive
+    connect(&ctl_, &Controller::partsLoaded, this, [this] {
+        rebuildNav();
+        updateStatus();
+    });
     connect(&ctl_, &Controller::lockChanged, this, &MainWindow::updateStatus);
     connect(&ctl_, &Controller::toastRequested, toast_, &Toast::show);
     connect(&ctl_, &Controller::busyChanged, this, [this](bool busy) {
@@ -547,10 +552,10 @@ void MainWindow::saveLayout()
         return;
     if (!path.endsWith(".vil"))
         path += ".vil";
-    ctl_.loadEntries(AllEntries, [this, path](bool ok) {
+    ctl_.require(AllParts, [this, path](bool ok) {
         const KeyboardState *kb = ctl_.keyboard();
         if (!ok || !kb) {
-            ctl_.toast(tr("Could not read the keyboard's entries"), Controller::ToastKind::Error);
+            ctl_.toast(tr("Could not read the keyboard"), Controller::ToastKind::Error);
             return;
         }
         QFile f(path);

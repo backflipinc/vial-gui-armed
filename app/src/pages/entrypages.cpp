@@ -135,7 +135,7 @@ EntryPage::EntryPage(Controller *ctl, const QString &hint)
 void EntryPage::keyboardChanged()
 {
     const KeyboardState *kb = ctl->keyboard();
-    if (kb && !(kb->entriesLoaded & kind())) {
+    if (kb && !(kb->loaded & kind())) {
         {
             QSignalBlocker block(list_);
             list_->clear();
@@ -144,7 +144,7 @@ void EntryPage::keyboardChanged()
         wait->setObjectName("armedHint");
         wait->setAlignment(Qt::AlignCenter);
         area_->setWidget(wait);
-        ctl->loadEntries(kind(), [self = QPointer(this)](bool ok) {
+        ctl->require(kind(), [self = QPointer(this)](bool ok) {
             if (!self)
                 return;
             if (ok)

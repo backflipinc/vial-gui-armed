@@ -44,15 +44,25 @@ QByteArray uid(Link &link)
     return link.transact(vialCmd({CMD_VIAL_GET_KEYBOARD_ID})).mid(4, 8);
 }
 
+quint32 definitionSize(Link &link)
+{
+    return le32(link.transact(vialCmd({CMD_VIAL_GET_SIZE})), 0);
+}
+
+QByteArray definitionBlock(Link &link, quint32 block)
+{
+    QByteArray m = vialCmd({CMD_VIAL_GET_DEFINITION});
+    putLe32(m, block);
+    return link.transact(m);
+}
+
 QByteArray definition(Link &link)
 {
-    qint64 size = le32(link.transact(vialCmd({CMD_VIAL_GET_SIZE})), 0);
+    qint64 size = definitionSize(link);
     QByteArray payload;
     payload.reserve(int(size));
     for (quint32 block = 0; size > 0; ++block, size -= hid::kMsgLen) {
-        QByteArray m = vialCmd({CMD_VIAL_GET_DEFINITION});
-        putLe32(m, block);
-        QByteArray d = link.transact(m);
+        QByteArray d = definitionBlock(link, block);
         payload += size < hid::kMsgLen ? d.left(int(size)) : d;
     }
     auto json = lzma::decompress(payload);

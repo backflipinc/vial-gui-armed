@@ -205,20 +205,57 @@ std::optional<Info> probe(Link &link, qint64 vialProtocol, std::optional<quint64
 QMap<int, quint8> readValues(Link &link, quint16 features)
 {
     QList<quint8> vids;
-    QList<QByteArray> msgs;
-    for (const auto &[feature, ids] : featureValues()) {
-        if (!(features & feature))
-            continue;
-        for (quint8 vid : ids) {
-            vids.append(vid);
-            msgs.append(cmd({SUB_GET, vid}));
-        }
-    }
+    for (const auto &[feature, ids] : featureValues())
+        if (features & feature)
+            vids += ids;
     QMap<int, quint8> out;
+    // GET_MANY: a dozen values a request; firmware before it answers unhandled
+    QList<QByteArray> msgs;
+    for (int i = 0; i < vids.size(); i += GET_MANY_MAX) {
+        const QList<quint8> chunk = vids.mid(i, GET_MANY_MAX);
+        QByteArray m = cmd({SUB_GET_MANY, int(chunk.size())});
+        for (quint8 vid : chunk)
+            m.append(char(vid));
+        msgs.append(m);
+    }
+    const QList<QByteArray> many = link.transactMany(msgs);
+    if (!many.isEmpty() && u8(many[0], 0) != UNHANDLED) {
+        for (int c = 0; c < many.size(); ++c) {
+            const quint16 done = le16(many[c], 16);
+            for (int i = 0; i < GET_MANY_MAX && c * GET_MANY_MAX + i < vids.size(); ++i)
+                if (done & (1 << i))
+                    out[vids[c * GET_MANY_MAX + i]] = u8(many[c], 3 + i);
+        }
+        return out;
+    }
+    msgs.clear();
+    for (quint8 vid : vids)
+        msgs.append(cmd({SUB_GET, vid}));
     const QList<QByteArray> replies = link.transactMany(msgs);
     for (int i = 0; i < replies.size(); ++i)
         if (u8(replies[i], 0) != UNHANDLED)
             out[vids[i]] = u8(replies[i], 3);
+    return out;
+}
+
+std::optional<QList<QByteArray>> readEntries(Link &link, quint8 getOp, int count, int size)
+{
+    const int per = (hid::kMsgLen - 4) / size;
+    QList<QByteArray> msgs;
+    for (int first = 0; first < count; first += per)
+        msgs.append(cmd({SUB_ENTRIES, getOp, first}));
+    QList<QByteArray> out;
+    const QList<QByteArray> replies = link.transactMany(msgs);
+    for (int r = 0; r < replies.size(); ++r) {
+        const QByteArray &d = replies[r];
+        if (u8(d, 0) == UNHANDLED)
+            return std::nullopt;
+        const int want = std::min(per, count - r * per);
+        if (u8(d, 2) < want)
+            throw Error("the keyboard has fewer entries than it said");
+        for (int i = 0; i < want; ++i)
+            out.append(d.mid(4 + i * size, size));
+    }
     return out;
 }
 

@@ -468,7 +468,12 @@ void Controller::fetch(int parts, hid::Priority priority)
         if (!(parts & part) || (fetching_ & part))
             continue;
         fetching_ |= part;
-        session_->run(priority, this, [raw = core_, part](hid::Link &link) mutable {
+        RawKeyboard raw = core_;
+        if (keyboard_->loaded & ArmedPart) {
+            raw.parts |= ArmedPart; // what the other parts may use
+            raw.armed = keyboard_->armed;
+        }
+        session_->run(priority, this, [raw, part](hid::Link &link) mutable {
             loadParts(link, raw, part);
             return raw;
         }, [this, serial, part](hid::Result<RawKeyboard> r) {

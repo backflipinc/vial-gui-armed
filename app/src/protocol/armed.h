@@ -33,7 +33,7 @@ enum Sub : quint8 {
     SUB_THEME_INFO, SUB_THEME_READ, SUB_THEME_WRITE, SUB_THEME_SAVE, SUB_THEME_REVERT,
     SUB_CLOCK_GET, SUB_CLOCK_SET, SUB_BOOTLOADER,
     SUB_HUD_INFO, SUB_HUD_SOURCE, SUB_HUD_VALUE, SUB_HUD_FONT, SUB_HUD_PALETTE, SUB_HUD_READ, SUB_HUD_WRITE,
-    SUB_HUD_APPLY, SUB_HUD_REVERT, SUB_HUD_PUSH, SUB_HUD_TEXT,
+    SUB_HUD_APPLY, SUB_HUD_REVERT, SUB_HUD_PUSH, SUB_HUD_TEXT, SUB_GET_MANY, SUB_ENTRIES,
 };
 
 enum ListKind : quint8 { L_EFFECTS, L_COLORS, L_STRIP_MODES, L_SLEEP, L_LEDS, L_SNAPTAP_MODES, L_ACCENTS, L_SCREEN_OFF };
@@ -127,6 +127,9 @@ private:
 
 std::optional<Info> probe(Link &link, qint64 vialProtocol, std::optional<quint64> keyboardId);
 QMap<int, quint8> readValues(Link &link, quint16 features);
+// Vial dynamic entries (getOp: vial::DYNAMIC_VIAL_*_GET), several to a reply; nullopt: the firmware can't
+inline constexpr int GET_MANY_MAX = 13;
+std::optional<QList<QByteArray>> readEntries(Link &link, quint8 getOp, int count, int size);
 void set(Link &link, quint8 vid, int value);
 void save(Link &link);
 

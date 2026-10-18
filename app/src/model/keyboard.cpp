@@ -56,9 +56,19 @@ QByteArray cachedDefinition(hid::Link &link, quint64 uid, const QString &dir)
 void loadParts(hid::Link &link, RawKeyboard &raw, int parts)
 {
     parts &= AllParts & ~raw.parts;
+    // qmk-armed packs several entries in a reply; ask unless the keyboard is known not to run it
+    bool packed = !(raw.parts & ArmedPart) || raw.armed;
     auto entries = [&](int kind, QList<QByteArray> &list, quint8 op, int count, int size) {
-        if (parts & kind)
-            list = vial::dynamicEntries(link, op, count, size);
+        if (!(parts & kind) || !count)
+            return;
+        if (packed && raw.vialProtocol >= 0) {
+            if (auto e = armed::readEntries(link, op, count, size)) {
+                list = *e;
+                return;
+            }
+            packed = false;
+        }
+        list = vial::dynamicEntries(link, op, count, size);
     };
     const vial::DynamicCounts &counts = raw.dynamicCounts;
     entries(TapDanceEntries, raw.tapDances, vial::DYNAMIC_VIAL_TAP_DANCE_GET, counts.tapDance, dynamic::TapDance::kSize);

@@ -24,6 +24,9 @@ struct ArmedKb {
     QByteArray screen;
     int listRequests = 0;
     int hudScreens = 0, hudScreen = 0; // 0: firmware that predates several HUD layouts
+    bool getMany = true;                // false: firmware before GET_MANY and ENTRIES
+    QList<QByteArray> combos;           // 10 bytes each
+    int getRequests = 0;
 
     QByteArray handle(const QByteArray &q)
     {
@@ -57,9 +60,34 @@ struct ArmedKb {
             break;
         }
         case armed::SUB_GET:
+            ++getRequests;
             r[2] = q[2];
             r[3] = char(u8(q, 2) + 100);
             break;
+        case armed::SUB_GET_MANY: {
+            if (!getMany)
+                return QByteArray(32, '\xFF');
+            ++getRequests;
+            quint16 done = 0;
+            for (int i = 0; i < u8(q, 2); ++i) {
+                r[3 + i] = char(u8(q, 3 + i) + 100);
+                done |= 1 << i;
+            }
+            r[16] = char(done & 0xFF);
+            r[17] = char(done >> 8);
+            break;
+        }
+        case armed::SUB_ENTRIES: {
+            if (!getMany || u8(q, 2) != 3)
+                return QByteArray(32, '\xFF');
+            int n = 0;
+            for (int i = u8(q, 3); i < combos.size() && 4 + (n + 1) * 10 <= 32; ++i, ++n)
+                r.replace(4 + n * 10, 10, combos[i]);
+            r[2] = char(n);
+            break;
+        }
+        default:
+            return QByteArray(32, '\xFF');
         case armed::SUB_HUD_INFO:
             r[2] = 1;
             r[3] = 40;
@@ -122,6 +150,39 @@ private slots:
         QCOMPARE(info->values.value(armed::V_HUE), quint8(armed::V_HUE + 100));
         QVERIFY(info->values.contains(armed::V_COLOR2));
         QVERIFY(!info->values.contains(armed::V_SLEEP));
+    }
+
+    void valuesOneByOneOnOlderFirmware()
+    {
+        Rig r;
+        r.akb.getMany = false;
+        auto info = armed::probe(*r.link, 6, std::nullopt);
+        QVERIFY(info);
+        QCOMPARE(info->values.value(armed::V_HUE), quint8(armed::V_HUE + 100));
+        QCOMPARE(r.akb.getRequests, int(info->values.size()));
+    }
+
+    void valuesInOneRequest()
+    {
+        Rig r;
+        auto info = armed::probe(*r.link, 6, std::nullopt);
+        QVERIFY(info);
+        QCOMPARE(r.akb.getRequests, 1);
+    }
+
+    void packedEntries()
+    {
+        Rig r;
+        for (int i = 0; i < 5; ++i)
+            r.akb.combos.append(QByteArray(10, char('a' + i)));
+        auto e = armed::readEntries(*r.link, 3, 5, 10);
+        QVERIFY(e);
+        QCOMPARE(e->size(), 5);
+        QCOMPARE(e->at(4), QByteArray(10, 'e'));
+        QCOMPARE(r.kb->requests.size(), 3); // two to a reply
+        QVERIFY(!armed::readEntries(*r.link, 1, 5, 10)); // a kind it doesn't pack: unhandled
+        r.akb.getMany = false;
+        QVERIFY(!armed::readEntries(*r.link, 3, 5, 10));
     }
 
     void notArmedForVia()

@@ -12,7 +12,27 @@
 
 using keycodes::Registry;
 
-RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson)
+RawEntries loadEntries(hid::Link &link, const vial::DynamicCounts &counts, int kinds)
+{
+    RawEntries out;
+    out.kinds = kinds & AllEntries;
+    auto read = [&](int kind, quint8 op, int count, int size) {
+        QList<QByteArray> list;
+        if (kinds & kind)
+            for (int i = 0; i < count; ++i)
+                list.append(vial::dynamicEntry(link, op, i, size));
+        return list;
+    };
+    out.tapDances = read(TapDanceEntries, vial::DYNAMIC_VIAL_TAP_DANCE_GET, counts.tapDance, dynamic::TapDance::kSize);
+    out.combos = read(ComboEntries, vial::DYNAMIC_VIAL_COMBO_GET, counts.combo, dynamic::Combo::kSize);
+    out.keyOverrides = read(KeyOverrideEntries, vial::DYNAMIC_VIAL_KEY_OVERRIDE_GET, counts.keyOverride,
+                            dynamic::KeyOverride::kSize);
+    out.altRepeatKeys = read(AltRepeatKeyEntries, vial::DYNAMIC_VIAL_ALT_REPEAT_KEY_GET, counts.altRepeatKey,
+                             dynamic::AltRepeatKey::kSize);
+    return out;
+}
+
+RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson, int entries)
 {
     RawKeyboard raw;
     raw.viaProtocol = vial::viaProtocol(link);
@@ -87,18 +107,7 @@ RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJs
     if (raw.macroInfo.memory)
         raw.macros = vial::macroBuffer(link, raw.macroInfo);
 
-    auto entries = [&](quint8 op, int count, int size) {
-        QList<QByteArray> out;
-        for (int i = 0; i < count; ++i)
-            out.append(vial::dynamicEntry(link, op, i, size));
-        return out;
-    };
-    raw.tapDances = entries(vial::DYNAMIC_VIAL_TAP_DANCE_GET, raw.dynamicCounts.tapDance, dynamic::TapDance::kSize);
-    raw.combos = entries(vial::DYNAMIC_VIAL_COMBO_GET, raw.dynamicCounts.combo, dynamic::Combo::kSize);
-    raw.keyOverrides = entries(vial::DYNAMIC_VIAL_KEY_OVERRIDE_GET, raw.dynamicCounts.keyOverride,
-                               dynamic::KeyOverride::kSize);
-    raw.altRepeatKeys = entries(vial::DYNAMIC_VIAL_ALT_REPEAT_KEY_GET, raw.dynamicCounts.altRepeatKey,
-                                dynamic::AltRepeatKey::kSize);
+    raw.entries = loadEntries(link, raw.dynamicCounts, entries);
     return raw;
 }
 
@@ -164,17 +173,26 @@ std::variant<KeyboardState, QString> KeyboardState::fromRaw(const RawKeyboard &r
             kb.encoders[kb.encoderIndex(layer, idx, 1)] = reg.serialize(pair.second);
         }
     }
-    for (const auto &e : raw.tapDances)
-        kb.tapDances.append(dynamic::TapDance::unpack(e));
-    for (const auto &e : raw.combos)
-        kb.combos.append(dynamic::Combo::unpack(e));
-    for (const auto &e : raw.keyOverrides)
-        kb.keyOverrides.append(dynamic::KeyOverride::unpack(e));
-    for (const auto &e : raw.altRepeatKeys)
-        kb.altRepeatKeys.append(dynamic::AltRepeatKey::unpack(e));
+    kb.applyEntries(raw.entries);
     for (auto it = raw.settings.begin(); it != raw.settings.end(); ++it)
         kb.settings[it.key()] = qmksettings::Catalog::instance().deserialize(it.key(), it.value());
     return kb;
+}
+
+void KeyboardState::applyEntries(const RawEntries &raw)
+{
+    auto apply = [&](int kind, auto &list, const QList<QByteArray> &blobs, auto unpack) {
+        if (!(raw.kinds & kind) || (entriesLoaded & kind))
+            return;
+        list.clear();
+        for (const auto &e : blobs)
+            list.append(unpack(e));
+        entriesLoaded |= kind;
+    };
+    apply(TapDanceEntries, tapDances, raw.tapDances, dynamic::TapDance::unpack);
+    apply(ComboEntries, combos, raw.combos, dynamic::Combo::unpack);
+    apply(KeyOverrideEntries, keyOverrides, raw.keyOverrides, dynamic::KeyOverride::unpack);
+    apply(AltRepeatKeyEntries, altRepeatKeys, raw.altRepeatKeys, dynamic::AltRepeatKey::unpack);
 }
 
 QByteArray KeyboardState::saveLayout() const

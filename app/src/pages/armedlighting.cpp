@@ -378,7 +378,7 @@ void ArmedLightingPage::deactivate()
 void ArmedLightingPage::tick()
 {
     const KeyboardState *kb = ctl->keyboard();
-    if (!kb || !kb->armed || !preview_ || !isVisible())
+    if (!kb || !kb->armed || !preview_ || !isVisible() || window()->isMinimized())
         return;
     const Info &io = *kb->armed;
     const qint64 t = now();
@@ -420,11 +420,10 @@ void ArmedLightingPage::tick()
         for (int i = 0; i < io.leds.size(); ++i)
             colors[i] = fnKeys_.contains({io.leds[i].row, io.leds[i].col}) ? on : lighting::Rgb{0, 0, 0};
     }
-    auto &keys = kb_->keys();
+    QList<std::pair<int, QColor>> glows;
     for (int i = 0; i < ledKeys_.size() && i < colors.size(); ++i)
-        if (ledKeys_[i] >= 0)
-            keys[ledKeys_[i]].glow = QColor(colors[i][0], colors[i][1], colors[i][2]);
-    kb_->update();
+        glows.append({ledKeys_[i], QColor(colors[i][0], colors[i][1], colors[i][2])});
+    kb_->setGlows(glows);
     if (io.has(F_STRIP)) {
         strip_.caps = false;
         stripView_->setColors(strip_.frame(t));

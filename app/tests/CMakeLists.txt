@@ -28,3 +28,6 @@ target_link_libraries(tst_gui PRIVATE vialarmed_ui)
 
 qt_add_executable(hwprobe hwprobe.cpp)
 target_link_libraries(hwprobe PRIVATE vialarmed_core)
+
+qt_add_executable(loadprof loadprof.cpp)
+target_link_libraries(loadprof PRIVATE vialarmed_core)

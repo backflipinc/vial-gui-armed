@@ -15,6 +15,17 @@
 
 #include <optional>
 
+// Tap dance, combo, key override and alt repeat key entries: over 2.4 GHz they cost half a connect, so they are
+// read when a page or a .vil save needs them
+enum EntryKinds { TapDanceEntries = 1, ComboEntries = 2, KeyOverrideEntries = 4, AltRepeatKeyEntries = 8, AllEntries = 15 };
+
+struct RawEntries {
+    int kinds = 0; // which lists were read
+    QList<QByteArray> tapDances, combos, keyOverrides, altRepeatKeys;
+};
+
+RawEntries loadEntries(hid::Link &link, const vial::DynamicCounts &counts, int kinds);
+
 // What a connect reads from the keyboard, as raw codes: loaded on the device thread (loadRaw), then turned
 // into names on the GUI thread (KeyboardState::fromRaw), where the keycode registry lives.
 struct RawKeyboard {
@@ -29,7 +40,7 @@ struct RawKeyboard {
     vial::MacroInfo macroInfo;
     QByteArray macros;
     vial::DynamicCounts dynamicCounts;
-    QList<QByteArray> tapDances, combos, keyOverrides, altRepeatKeys;
+    RawEntries entries;
     QSet<quint16> supportedSettings;
     QMap<quint16, QByteArray> settings;
 
@@ -44,7 +55,8 @@ struct RawKeyboard {
 };
 
 // sideloadJson: the VIA definition to use instead of asking the keyboard for its own
-RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson);
+// entries: EntryKinds to read now (the rest stay unread)
+RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJson, int entries = 0);
 
 struct KeyboardState {
     Definition def;
@@ -63,6 +75,7 @@ struct KeyboardState {
     QList<dynamic::Combo> combos;
     QList<dynamic::KeyOverride> keyOverrides;
     QList<dynamic::AltRepeatKey> altRepeatKeys;
+    int entriesLoaded = 0; // EntryKinds
     QSet<quint16> supportedSettings;
     QMap<quint16, quint32> settings;
     QString lighting;
@@ -74,6 +87,8 @@ struct KeyboardState {
 
     // rebuilds the keycode registry for this keyboard, so call it on the GUI thread
     static std::variant<KeyboardState, QString> fromRaw(const RawKeyboard &raw);
+    // fills the lists read later; ones already loaded keep their (possibly edited) entries
+    void applyEntries(const RawEntries &raw);
 
     int keyIndex(int layer, int row, int col) const { return (layer * def.rows + row) * def.cols + col; }
     int encoderIndex(int layer, int index, int direction) const
@@ -86,7 +101,7 @@ struct KeyboardState {
         return encoders.value(encoderIndex(layer, index, direction));
     }
 
-    // the .vil layout file
+    // the .vil layout file; needs all entries loaded
     QByteArray saveLayout() const;
 };
 

@@ -28,6 +28,7 @@ signals:
 private:
     explicit FirmwareFlasher(Controller *ctl);
     void log(const QString &line);
+    void enterBootloader();
     void waitForBootloader(int triesLeft);
     void flashAt(const QByteArray &path);
     void finish(bool ok, const QString &msg);

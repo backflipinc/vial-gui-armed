@@ -1337,7 +1337,7 @@ void ThemeEditorPage::deactivate()
 
 void ThemeEditorPage::tick()
 {
-    if (!loaded() || !renderer_ || !isVisible())
+    if (!loaded() || !renderer_ || !isVisible() || window()->isMinimized())
         return;
     const qint64 t = clock_.elapsed();
     Theme shown = theme();
@@ -1361,9 +1361,14 @@ void ThemeEditorPage::tick()
     const int val = ctl->armedValue(armed::V_VAL);
     const int v = val ? std::min(255, val * 255 / std::max(1, io.maxBrightness)) : 255;
     const auto colors = renderer_->frame(shown, t, std::max(v, 90));
-    auto &keys = kb_->keys();
+    QList<std::pair<int, QColor>> glows;
     for (int i = 0; i < ledKeys_.size() && i < colors.size(); ++i)
-        if (ledKeys_[i] >= 0)
-            keys[ledKeys_[i]].glow = QColor(colors[i][0], colors[i][1], colors[i][2]);
-    kb_->update();
+        glows.append({ledKeys_[i], QColor(colors[i][0], colors[i][1], colors[i][2])});
+    kb_->setGlows(glows);
+    // the covered-key marks and the center are drawn over the whole view
+    auto overlay = std::pair{coveredKeys(), centerPoint()};
+    if (overlay != overlay_) {
+        overlay_ = std::move(overlay);
+        kb_->update();
+    }
 }

@@ -75,6 +75,9 @@ public:
     std::optional<Themes> &themes() { return themes_; }
     void loadThemes(std::function<void(bool ok)> done);
 
+    // tap dance / combo / key override / alt repeat key lists (EntryKinds), read the first time they are needed
+    void loadEntries(int kinds, std::function<void(bool ok)> done);
+
     // the keyboard's clock follows this computer's: on connect and every ten minutes
     void syncClock();
     QString clockStatus() const { return clockStatus_; }

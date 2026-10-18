@@ -16,12 +16,14 @@ public:
     void keyboardChanged() override;
 
 protected:
+    virtual int kind() const = 0; // EntryKinds
     virtual int count() const = 0;
     virtual QString summary(int index) const = 0;
     virtual QWidget *editor(int index) = 0;
     void refreshSummary(int index);
 
 private:
+    void populate();
     void show(int index);
 
     QListWidget *list_;
@@ -34,6 +36,7 @@ class TapDancePage : public EntryPage {
 public:
     explicit TapDancePage(Controller *ctl);
 protected:
+    int kind() const override { return TapDanceEntries; }
     int count() const override;
     QString summary(int index) const override;
     QWidget *editor(int index) override;
@@ -44,6 +47,7 @@ class ComboPage : public EntryPage {
 public:
     explicit ComboPage(Controller *ctl);
 protected:
+    int kind() const override { return ComboEntries; }
     int count() const override;
     QString summary(int index) const override;
     QWidget *editor(int index) override;
@@ -54,6 +58,7 @@ class KeyOverridePage : public EntryPage {
 public:
     explicit KeyOverridePage(Controller *ctl);
 protected:
+    int kind() const override { return KeyOverrideEntries; }
     int count() const override;
     QString summary(int index) const override;
     QWidget *editor(int index) override;
@@ -64,6 +69,7 @@ class AltRepeatKeyPage : public EntryPage {
 public:
     explicit AltRepeatKeyPage(Controller *ctl);
 protected:
+    int kind() const override { return AltRepeatKeyEntries; }
     int count() const override;
     QString summary(int index) const override;
     QWidget *editor(int index) override;

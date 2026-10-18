@@ -539,8 +539,7 @@ void MainWindow::showEntry(int visibleIndex, int part)
 
 void MainWindow::saveLayout()
 {
-    const KeyboardState *kb = ctl_.keyboard();
-    if (!kb)
+    if (!ctl_.keyboard())
         return;
     QString path = QFileDialog::getSaveFileName(this, tr("Save layout"), settings_.value("layout_dir").toString(),
                                                 tr("Vial layout (*.vil)"));
@@ -548,13 +547,20 @@ void MainWindow::saveLayout()
         return;
     if (!path.endsWith(".vil"))
         path += ".vil";
-    QFile f(path);
-    if (!f.open(QIODevice::WriteOnly) || f.write(kb->saveLayout()) < 0) {
-        ctl_.toast(tr("Could not save %1: %2").arg(path, f.errorString()), Controller::ToastKind::Error);
-        return;
-    }
-    settings_.setValue("layout_dir", QFileInfo(path).absolutePath());
-    ctl_.toast(tr("Layout saved to %1").arg(QFileInfo(path).fileName()), Controller::ToastKind::Ok);
+    ctl_.loadEntries(AllEntries, [this, path](bool ok) {
+        const KeyboardState *kb = ctl_.keyboard();
+        if (!ok || !kb) {
+            ctl_.toast(tr("Could not read the keyboard's entries"), Controller::ToastKind::Error);
+            return;
+        }
+        QFile f(path);
+        if (!f.open(QIODevice::WriteOnly) || f.write(kb->saveLayout()) < 0) {
+            ctl_.toast(tr("Could not save %1: %2").arg(path, f.errorString()), Controller::ToastKind::Error);
+            return;
+        }
+        settings_.setValue("layout_dir", QFileInfo(path).absolutePath());
+        ctl_.toast(tr("Layout saved to %1").arg(QFileInfo(path).fileName()), Controller::ToastKind::Ok);
+    });
 }
 
 void MainWindow::loadLayout()

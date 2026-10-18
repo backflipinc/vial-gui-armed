@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
     hid::Session session(devices.first());
     t.restart();
-    session.run(hid::Priority::Interactive, &app, [](hid::Link &link) { return loadRaw(link, std::nullopt); },
+    session.run(hid::Priority::Interactive, &app, [](hid::Link &link) { return loadRaw(link, std::nullopt, AllEntries); },
                 [&](hid::Result<RawKeyboard> r) {
         if (!r.ok()) {
             std::printf("error: %s\n", qPrintable(r.error));

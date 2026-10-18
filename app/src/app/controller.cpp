@@ -302,6 +302,15 @@ void Controller::setLayoutOptions(quint32 options)
 
 void Controller::restoreLayout(const QByteArray &vil, std::function<void(bool, const QString &)> done)
 {
+    if (keyboard_ && (keyboard_->entriesLoaded & AllEntries) != AllEntries) {
+        loadEntries(AllEntries, [this, vil, done](bool ok) {
+            if (ok)
+                restoreLayout(vil, done);
+            else
+                done(false, tr("Could not read the keyboard's entries"));
+        });
+        return;
+    }
     KeyboardState *kb = keyboard();
     if (!kb || !session_) {
         done(false, tr("No keyboard"));
@@ -425,6 +434,30 @@ void Controller::loadThemes(std::function<void(bool)> done)
             t.list.append(theme::Theme::unpack(blob, t.info.leds, t.info.layers));
         themes_ = t;
         done(true);
+    });
+}
+
+void Controller::loadEntries(int kinds, std::function<void(bool)> done)
+{
+    if (!keyboard_ || !session_) {
+        done(false);
+        return;
+    }
+    const int missing = kinds & AllEntries & ~keyboard_->entriesLoaded;
+    if (!missing) {
+        done(true);
+        return;
+    }
+    const vial::DynamicCounts counts = keyboard_->dynamicCounts;
+    const quint64 serial = loadSerial_;
+    session_->run(hid::Priority::Interactive, this, [counts, missing](hid::Link &link) {
+        return ::loadEntries(link, counts, missing);
+    }, [this, serial, kinds, done](hid::Result<RawEntries> r) {
+        if (serial != loadSerial_ || !keyboard_)
+            return;
+        if (r.ok())
+            keyboard_->applyEntries(*r.value);
+        done((keyboard_->entriesLoaded & kinds & AllEntries) == (kinds & AllEntries));
     });
 }
 

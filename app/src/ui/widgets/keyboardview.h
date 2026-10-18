@@ -42,6 +42,8 @@ public:
     void relayout();
 
     QList<Key> &keys() { return visible_; }
+    // an LED preview frame (key index -> color): repaints only the keys whose color changed
+    void setGlows(const QList<std::pair<int, QColor>> &glows);
     int activeIndex() const { return active_; }
     bool activeMask() const { return activeMask_; }
     void setActive(int index, bool mask = false);
@@ -76,6 +78,8 @@ protected:
     std::pair<int, bool> hit(const QPointF &pos) const;
     // paints in the key's own coordinates (rotation included)
     void transformTo(QPainter &qp, const Key &k) const;
+    // the key's area in widget pixels, pen included
+    QRect bounds(const Key &k) const;
 
 private:
     void place(Key &k, double unit, double shiftX, double shiftY) const;

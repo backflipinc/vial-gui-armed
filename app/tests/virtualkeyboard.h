@@ -48,6 +48,13 @@ public:
         return writes_;
     }
 
+    // every request, in order
+    QList<QByteArray> requests() const
+    {
+        QMutexLocker l(&mutex_);
+        return requests_;
+    }
+
     // a fresh device for a session; every one talks to this keyboard
     std::unique_ptr<hid::RawHid> open()
     {
@@ -60,6 +67,7 @@ public:
     {
         using namespace bytes;
         QMutexLocker l(&mutex_);
+        requests_.append(q);
         QByteArray r = q;
         r.resize(32);
         auto put = [&r](int off, const QByteArray &d) { r.replace(off, d.size(), d); };
@@ -165,6 +173,6 @@ public:
 
 private:
     QByteArray compressed_;
-    QList<QByteArray> writes_;
+    QList<QByteArray> writes_, requests_;
     mutable QMutex mutex_;
 };

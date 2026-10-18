@@ -121,6 +121,7 @@ private:
     QCheckBox *solo_, *caps_, *radial_, *mirror_;
     QComboBox *previewLayer_;
     Segmented *keysMode_;
+    std::pair<QSet<int>, std::optional<QPointF>> overlay_;
     ThemeKeyboard *kb_;
     LayerList *layers_;
     BracketFrame *props_;

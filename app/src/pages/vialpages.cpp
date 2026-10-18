@@ -145,12 +145,12 @@ MatrixPage::MatrixPage(Controller *ctl)
         Unlocker::ensure(this->ctl, this, [](bool) {});
     });
     grabber_->hide();
-    timer_.setInterval(20);
     connect(&timer_, &QTimer::timeout, this, &MatrixPage::poll);
 }
 
 void MatrixPage::keyboardChanged()
 {
+    last_.clear();
     if (const KeyboardState *kb = ctl->keyboard())
         view_->setKeys(kb->def.keys, kb->def.encoders);
 }
@@ -159,6 +159,9 @@ void MatrixPage::activate()
 {
     // keys pressed for testing shouldn't type into the app
     grabber_->grabKeyboard();
+    // every 2.4 GHz request costs ~20 ms of radio time, so the dongle is asked less often
+    const auto cur = ctl->current();
+    timer_.setInterval(cur && cur->isDongle() ? 50 : 20);
     timer_.start();
 }
 
@@ -170,6 +173,7 @@ void MatrixPage::deactivate()
 
 void MatrixPage::reset()
 {
+    last_.clear();
     for (auto &k : view_->keys())
         k.pressed = k.on = false;
     view_->update();
@@ -178,10 +182,10 @@ void MatrixPage::reset()
 void MatrixPage::poll()
 {
     const KeyboardState *kb = ctl->keyboard();
-    if (!kb || !ctl->session() || inFlight_)
+    if (!kb || !ctl->session() || inFlight_ || !isVisible() || window()->isMinimized())
         return;
     inFlight_ = true;
-    const bool askLock = ticks_++ % 50 == 0;
+    const bool askLock = ticks_++ % (1000 / timer_.interval()) == 0;
     const int proto = int(kb->vialProtocol);
     ctl->session()->run(hid::Priority::Poll, this, [askLock, proto](hid::Link &link) {
         std::pair<std::optional<bool>, QByteArray> out;
@@ -201,8 +205,9 @@ void MatrixPage::poll()
             lockHint_->setVisible(!*unlocked);
             unlock_->setVisible(!*unlocked);
         }
-        if (data.isEmpty())
+        if (data.isEmpty() || data == last_)
             return;
+        last_ = data;
         const KeyboardState *kb = ctl->keyboard();
         if (!kb)
             return;

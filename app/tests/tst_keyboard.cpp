@@ -23,7 +23,7 @@ struct Rig {
     }
     void load()
     {
-        auto st = KeyboardState::fromRaw(loadRaw(link, std::nullopt));
+        auto st = KeyboardState::fromRaw(loadRaw(link, std::nullopt, AllEntries));
         QVERIFY2(std::holds_alternative<KeyboardState>(st), qPrintable(std::get_if<QString>(&st) ? *std::get_if<QString>(&st) : ""));
         kb = std::get<KeyboardState>(st);
     }
@@ -49,6 +49,40 @@ class TestKeyboard : public QObject {
     Q_OBJECT
 
 private slots:
+    void connectSkipsEntries()
+    {
+        Rig rig(LAYOUT_2x2, 2, 2, 2);
+        rig.vk.tapDances = {{0x04, 0x05, 0x06, 0x07, 200}, {}};
+        rig.vk.combos = {{0x04, 0x05, 0, 0, 0x06}};
+        auto st = KeyboardState::fromRaw(loadRaw(rig.link, std::nullopt));
+        QVERIFY(std::holds_alternative<KeyboardState>(st));
+        KeyboardState kb = std::get<KeyboardState>(st);
+        auto entryReads = [&rig] {
+            int n = 0;
+            for (const QByteArray &q : rig.vk.requests())
+                if (quint8(q[0]) == 0xFE && quint8(q[1]) == vial::CMD_VIAL_DYNAMIC_ENTRY_OP
+                    && quint8(q[2]) != vial::DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES)
+                    ++n;
+            return n;
+        };
+        QCOMPARE(entryReads(), 0);
+        QCOMPARE(kb.entriesLoaded, 0);
+        QCOMPARE(kb.dynamicCounts.tapDance, 2);
+
+        kb.applyEntries(loadEntries(rig.link, kb.dynamicCounts, ComboEntries));
+        QCOMPARE(entryReads(), 1);
+        QCOMPARE(kb.entriesLoaded, int(ComboEntries));
+        QCOMPARE(kb.combos.size(), 1);
+        QVERIFY(kb.tapDances.isEmpty());
+
+        // an edited list is not replaced by a later read
+        kb.combos[0].output = QStringLiteral("KC_X");
+        kb.applyEntries(loadEntries(rig.link, kb.dynamicCounts, AllEntries));
+        QCOMPARE(kb.entriesLoaded, int(AllEntries));
+        QCOMPARE(kb.combos[0].output, QStringLiteral("KC_X"));
+        QCOMPARE(kb.tapDances.size(), 2);
+    }
+
     void keyboardLayout()
     {
         Rig rig(LAYOUT_2x2, 2, 2, 2);

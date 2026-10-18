@@ -79,12 +79,25 @@ void FirmwareFlasher::start(const QByteArray &firmware, bool restore)
         finish(false, tr("Error: Firmware UID does not match keyboard UID. Check that you have the correct file"));
         return;
     }
-    if (restore) {
-        log(tr("Backing up current layout..."));
-        layout_ = kb->saveLayout();
-    } else {
-        layout_.reset();
+    layout_.reset();
+    if (!restore) {
+        enterBootloader();
+        return;
     }
+    log(tr("Backing up current layout..."));
+    ctl_->loadEntries(AllEntries, [this](bool ok) {
+        const KeyboardState *kb = ctl_->keyboard();
+        if (!ok || !kb) {
+            finish(false, tr("Error: could not read the current layout"));
+            return;
+        }
+        layout_ = kb->saveLayout();
+        enterBootloader();
+    });
+}
+
+void FirmwareFlasher::enterBootloader()
+{
     Unlocker::ensure(ctl_, ctl_->dialogParent(), [this](bool ok) {
         if (!ok) {
             finish(false, tr("The keyboard was not unlocked"));

@@ -335,7 +335,36 @@ void KeyboardView::transformTo(QPainter &qp, const Key &k) const
     qp.translate(-k.rotX, -k.rotY);
 }
 
-void KeyboardView::paintEvent(QPaintEvent *)
+QRect KeyboardView::bounds(const Key &k) const
+{
+    QTransform t;
+    t.scale(scale_, scale_);
+    t.translate(k.shiftX, k.shiftY);
+    t.translate(k.rotX, k.rotY);
+    t.rotate(k.def.geo.rotationAngle);
+    t.translate(-k.rotX, -k.rotY);
+    return t.map(k.background).boundingRect().toAlignedRect().adjusted(-3, -3, 3, 3);
+}
+
+void KeyboardView::setGlows(const QList<std::pair<int, QColor>> &glows)
+{
+    QList<int> changed;
+    for (const auto &[i, c] : glows) {
+        if (i < 0 || i >= visible_.size() || visible_[i].glow == c)
+            continue;
+        visible_[i].glow = c;
+        changed.append(i);
+    }
+    // a region of many small rects paints slower than the whole view
+    if (changed.size() > visible_.size() / 4) {
+        update();
+        return;
+    }
+    for (int i : changed)
+        update(bounds(visible_[i]));
+}
+
+void KeyboardView::paintEvent(QPaintEvent *e)
 {
     using namespace ui::theme;
     QPainter qp(this);
@@ -351,8 +380,11 @@ void KeyboardView::paintEvent(QPaintEvent *)
     QFont maskFont(font);
     maskFont.setPixelSize(int(std::round(font.pixelSize() * 0.8)));
 
+    const bool partial = e->rect() != rect();
     for (int i = 0; i < visible_.size(); ++i) {
         const Key &k = visible_[i];
+        if (partial && !e->region().intersects(bounds(k)))
+            continue;
         qp.save();
         transformTo(qp, k);
 

@@ -43,6 +43,7 @@ private:
     QWidget *grabber_;
     bool inFlight_ = false;
     int ticks_ = 0;
+    QByteArray last_;
 };
 
 class FirmwarePage : public Page {

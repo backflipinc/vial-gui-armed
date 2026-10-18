@@ -11,6 +11,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
+#include <QPointer>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSpinBox>
@@ -132,6 +133,31 @@ EntryPage::EntryPage(Controller *ctl, const QString &hint)
 }
 
 void EntryPage::keyboardChanged()
+{
+    const KeyboardState *kb = ctl->keyboard();
+    if (kb && !(kb->entriesLoaded & kind())) {
+        {
+            QSignalBlocker block(list_);
+            list_->clear();
+        }
+        auto *wait = new QLabel(tr("READING FROM THE KEYBOARD…"));
+        wait->setObjectName("armedHint");
+        wait->setAlignment(Qt::AlignCenter);
+        area_->setWidget(wait);
+        ctl->loadEntries(kind(), [self = QPointer(this)](bool ok) {
+            if (!self)
+                return;
+            if (ok)
+                self->populate();
+            else if (auto *l = qobject_cast<QLabel *>(self->area_->widget()))
+                l->setText(tr("COULD NOT READ THE ENTRIES"));
+        });
+        return;
+    }
+    populate();
+}
+
+void EntryPage::populate()
 {
     QSignalBlocker block(list_);
     list_->clear();

@@ -19,6 +19,7 @@ public:
     qint64 now = 0;
     QList<QByteArray> requests;
     QList<int> readTimeouts;   // every read with a timeout > 1 ms
+    int maxInFlight = 0;
 
     int write(const QByteArray &report) override
     {
@@ -30,6 +31,7 @@ public:
         int latency = lateMs.isEmpty() ? latencyMs : lateMs.takeFirst();
         if (handler)
             pending_.push_back({now + latency, handler(report)});
+        maxInFlight = std::max(maxInFlight, int(pending_.size()));
         return report.size() + 1;
     }
 

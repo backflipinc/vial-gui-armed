@@ -127,10 +127,10 @@ private slots:
     void macrosStopEarlyAndNormalize()
     {
         Rig r;
-        r.vkb.macros = QByteArray("ab\0c\0\0", 6) + QByteArray(200, '\0');
+        r.vkb.macros = QByteArray("ab\0c\0\0", 6) + QByteArray(600, '\0');
         QByteArray out = vial::macroBuffer(*r.link, vial::macroInfo(*r.link));
         QCOMPARE(out, QByteArray("ab\0c\0\0", 6));
-        QCOMPARE(r.vkb.bufferReads, 1);
+        QCOMPARE(r.vkb.bufferReads, hid::Link::kWindow); // one window in flight, not the whole buffer
     }
 
     void macrosShortBufferIsPadded()

@@ -3,6 +3,7 @@
 #include "hid/link.h"
 
 #include <QByteArray>
+#include <QMap>
 #include <QList>
 #include <QPair>
 #include <QSet>
@@ -96,11 +97,13 @@ QByteArray definition(Link &link);
 // the LZMA-compressed definition's size, and one 32-byte block of it
 quint32 definitionSize(Link &link);
 QByteArray definitionBlock(Link &link, quint32 block);
+QList<QByteArray> definitionBlocks(Link &link, quint32 first, quint32 count);
 int layerCount(Link &link);
 
 QByteArray keymapBuffer(Link &link, int size);
 void setKeycode(Link &link, int layer, int row, int col, quint16 code);
 QPair<quint16, quint16> encoder(Link &link, int layer, int index);
+QList<QPair<quint16, quint16>> encoders(Link &link, const QList<QPair<int, int>> &which); // (layer, index)
 void setEncoder(Link &link, int layer, int index, int direction, quint16 code);
 quint32 layoutOptions(Link &link);
 void setLayoutOptions(Link &link, quint32 options);
@@ -120,11 +123,13 @@ struct DynamicCounts {
 };
 DynamicCounts dynamicCounts(Link &link);
 QByteArray dynamicEntry(Link &link, quint8 getOp, int index, int size);
+QList<QByteArray> dynamicEntries(Link &link, quint8 getOp, int count, int size);
 void setDynamicEntry(Link &link, quint8 setOp, int index, const QByteArray &entry, int retries);
 
 QSet<quint16> qmkSettingsSupported(Link &link);
 // the setting's raw bytes, or nothing if the keyboard refused
 std::optional<QByteArray> qmkSettingGet(Link &link, quint16 qsid);
+QMap<quint16, QByteArray> qmkSettingsGet(Link &link, const QList<quint16> &qsids); // the supported ones
 int qmkSettingSet(Link &link, quint16 qsid, const QByteArray &value);
 void qmkSettingsReset(Link &link);
 

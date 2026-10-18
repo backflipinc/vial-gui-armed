@@ -3,6 +3,7 @@
 #include "hid/rawhid.h"
 
 #include <QByteArray>
+#include <QList>
 
 #include <atomic>
 #include <functional>
@@ -34,6 +35,11 @@ public:
     Link(std::unique_ptr<RawHid> dev, bool dongle);
 
     QByteArray transact(QByteArray msg, int retries = 20);
+    // several independent reads (a lost reply makes them go again), replies in order. Over USB up to kWindow are in flight at once (the
+    // keyboard answers them in order); the radio tunnel takes one at a time. A lost reply falls back to
+    // one by one with retries.
+    QList<QByteArray> transactMany(const QList<QByteArray> &msgs, int retries = 20);
+    static constexpr int kWindow = 8;
     void write(QByteArray msg);
     QByteArray read(int timeoutMs);
 

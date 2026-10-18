@@ -56,15 +56,24 @@ QByteArray definitionBlock(Link &link, quint32 block)
     return link.transact(m);
 }
 
+QList<QByteArray> definitionBlocks(Link &link, quint32 first, quint32 count)
+{
+    QList<QByteArray> msgs;
+    for (quint32 block = first; block < first + count; ++block) {
+        QByteArray m = vialCmd({CMD_VIAL_GET_DEFINITION});
+        putLe32(m, block);
+        msgs.append(m);
+    }
+    return link.transactMany(msgs);
+}
+
 QByteArray definition(Link &link)
 {
-    qint64 size = definitionSize(link);
+    const quint32 size = definitionSize(link);
     QByteArray payload;
-    payload.reserve(int(size));
-    for (quint32 block = 0; size > 0; ++block, size -= hid::kMsgLen) {
-        QByteArray d = definitionBlock(link, block);
-        payload += size < hid::kMsgLen ? d.left(int(size)) : d;
-    }
+    for (const QByteArray &d : definitionBlocks(link, 0, (size + hid::kMsgLen - 1) / hid::kMsgLen))
+        payload += d;
+    payload.truncate(size);
     auto json = lzma::decompress(payload);
     if (!json)
         throw hid::LinkError("the keyboard definition is corrupt");
@@ -78,15 +87,18 @@ int layerCount(Link &link)
 
 QByteArray keymapBuffer(Link &link, int size)
 {
-    QByteArray out;
-    out.reserve(size);
+    QList<QByteArray> msgs;
     for (int off = 0; off < size; off += kBufferChunk) {
-        int n = std::min(size - off, kBufferChunk);
         QByteArray m = of({CMD_VIA_KEYMAP_GET_BUFFER});
         putBe16(m, quint16(off));
-        m.append(char(n));
-        out += link.transact(m).mid(4, n);
+        m.append(char(std::min(size - off, kBufferChunk)));
+        msgs.append(m);
     }
+    QByteArray out;
+    out.reserve(size);
+    const QList<QByteArray> replies = link.transactMany(msgs);
+    for (int i = 0; i < replies.size(); ++i)
+        out += replies[i].mid(4, std::min(size - i * kBufferChunk, kBufferChunk));
     return out;
 }
 
@@ -101,6 +113,17 @@ QPair<quint16, quint16> encoder(Link &link, int layer, int index)
 {
     QByteArray d = link.transact(vialCmd({CMD_VIAL_GET_ENCODER, layer, index}));
     return {be16(d, 0), be16(d, 2)};
+}
+
+QList<QPair<quint16, quint16>> encoders(Link &link, const QList<QPair<int, int>> &which)
+{
+    QList<QByteArray> msgs;
+    for (const auto &[layer, index] : which)
+        msgs.append(vialCmd({CMD_VIAL_GET_ENCODER, layer, index}));
+    QList<QPair<quint16, quint16>> out;
+    for (const QByteArray &d : link.transactMany(msgs))
+        out.append({be16(d, 0), be16(d, 2)});
+    return out;
 }
 
 void setEncoder(Link &link, int layer, int index, int direction, quint16 code)
@@ -133,15 +156,23 @@ MacroInfo macroInfo(Link &link)
 QByteArray macroBuffer(Link &link, const MacroInfo &info)
 {
     QByteArray raw;
-    for (int off = 0; off < info.memory; off += kBufferChunk) {
-        int n = std::min(kBufferChunk, info.memory - off);
-        QByteArray m = of({CMD_VIA_MACRO_GET_BUFFER});
-        putBe16(m, quint16(off));
-        m.append(char(n));
-        raw += link.transact(m).mid(4, n);
-        // only the first `count` macros matter, stop once they are all in
-        if (raw.count('\0') > info.count)
-            break;
+    // only the first `count` macros matter: read a window at a time and stop once they are all in
+    for (int off = 0; off < info.memory && raw.count('\0') <= info.count;) {
+        QList<QByteArray> msgs;
+        QList<int> sizes;
+        // the dongle takes one at a time anyway, so it doesn't read past the end
+        const int window = link.isDongle() ? 1 : hid::Link::kWindow;
+        for (int k = 0; k < window && off < info.memory; ++k, off += kBufferChunk) {
+            const int n = std::min(kBufferChunk, info.memory - off);
+            QByteArray m = of({CMD_VIA_MACRO_GET_BUFFER});
+            putBe16(m, quint16(off));
+            m.append(char(n));
+            msgs.append(m);
+            sizes.append(n);
+        }
+        const QList<QByteArray> replies = link.transactMany(msgs);
+        for (int i = 0; i < replies.size(); ++i)
+            raw += replies[i].mid(4, sizes[i]);
     }
     QList<QByteArray> macros = raw.split('\0');
     while (macros.size() < info.count)
@@ -179,6 +210,20 @@ QByteArray dynamicEntry(Link &link, quint8 getOp, int index, int size)
     return d.mid(1, size);
 }
 
+QList<QByteArray> dynamicEntries(Link &link, quint8 getOp, int count, int size)
+{
+    QList<QByteArray> msgs;
+    for (int i = 0; i < count; ++i)
+        msgs.append(vialCmd({CMD_VIAL_DYNAMIC_ENTRY_OP, getOp, i}));
+    QList<QByteArray> out;
+    for (const QByteArray &d : link.transactMany(msgs)) {
+        if (u8(d, 0) != 0)
+            throw hid::LinkError("failed retrieving a dynamic entry from the device");
+        out.append(d.mid(1, size));
+    }
+    return out;
+}
+
 void setDynamicEntry(Link &link, quint8 setOp, int index, const QByteArray &entry, int retries)
 {
     link.transact(vialCmd({CMD_VIAL_DYNAMIC_ENTRY_OP, setOp, index}) + entry, retries);
@@ -210,6 +255,22 @@ std::optional<QByteArray> qmkSettingGet(Link &link, quint16 qsid)
     if (u8(d, 0) != 0)
         return std::nullopt;
     return d.mid(1);
+}
+
+QMap<quint16, QByteArray> qmkSettingsGet(Link &link, const QList<quint16> &qsids)
+{
+    QList<QByteArray> msgs;
+    for (quint16 qsid : qsids) {
+        QByteArray m = vialCmd({CMD_VIAL_QMK_SETTINGS_GET});
+        putLe16(m, qsid);
+        msgs.append(m);
+    }
+    QMap<quint16, QByteArray> out;
+    const QList<QByteArray> replies = link.transactMany(msgs);
+    for (int i = 0; i < replies.size(); ++i)
+        if (u8(replies[i], 0) == 0)
+            out[qsids[i]] = replies[i].mid(1);
+    return out;
 }
 
 int qmkSettingSet(Link &link, quint16 qsid, const QByteArray &value)

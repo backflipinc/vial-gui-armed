@@ -204,16 +204,21 @@ std::optional<Info> probe(Link &link, qint64 vialProtocol, std::optional<quint64
 
 QMap<int, quint8> readValues(Link &link, quint16 features)
 {
-    QMap<int, quint8> out;
-    for (const auto &[feature, vids] : featureValues()) {
+    QList<quint8> vids;
+    QList<QByteArray> msgs;
+    for (const auto &[feature, ids] : featureValues()) {
         if (!(features & feature))
             continue;
-        for (quint8 vid : vids) {
-            QByteArray d = send(link, {SUB_GET, vid});
-            if (u8(d, 0) != UNHANDLED)
-                out[vid] = u8(d, 3);
+        for (quint8 vid : ids) {
+            vids.append(vid);
+            msgs.append(cmd({SUB_GET, vid}));
         }
     }
+    QMap<int, quint8> out;
+    const QList<QByteArray> replies = link.transactMany(msgs);
+    for (int i = 0; i < replies.size(); ++i)
+        if (u8(replies[i], 0) != UNHANDLED)
+            out[vids[i]] = u8(replies[i], 3);
     return out;
 }
 

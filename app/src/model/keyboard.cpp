@@ -38,8 +38,8 @@ QByteArray cachedDefinition(hid::Link &link, quint64 uid, const QString &dir)
     }
     QByteArray payload;
     payload.reserve(int(size));
-    for (quint32 block = 0; block < last; ++block)
-        payload += vial::definitionBlock(link, block);
+    for (const QByteArray &d : vial::definitionBlocks(link, 0, last))
+        payload += d;
     payload += tail;
     auto json = lzma::decompress(payload);
     if (!json)
@@ -58,8 +58,7 @@ void loadParts(hid::Link &link, RawKeyboard &raw, int parts)
     parts &= AllParts & ~raw.parts;
     auto entries = [&](int kind, QList<QByteArray> &list, quint8 op, int count, int size) {
         if (parts & kind)
-            for (int i = 0; i < count; ++i)
-                list.append(vial::dynamicEntry(link, op, i, size));
+            list = vial::dynamicEntries(link, op, count, size);
     };
     const vial::DynamicCounts &counts = raw.dynamicCounts;
     entries(TapDanceEntries, raw.tapDances, vial::DYNAMIC_VIAL_TAP_DANCE_GET, counts.tapDance, dynamic::TapDance::kSize);
@@ -74,12 +73,12 @@ void loadParts(hid::Link &link, RawKeyboard &raw, int parts)
 
     if ((parts & SettingsPart) && raw.vialProtocol >= vial::VIAL_PROTOCOL_QMK_SETTINGS) {
         raw.supportedSettings = vial::qmkSettingsSupported(link);
-        for (quint16 qsid : std::as_const(raw.supportedSettings)) {
-            if (!qmksettings::Catalog::instance().supported(qsid))
-                continue;
-            if (auto v = vial::qmkSettingGet(link, qsid))
-                raw.settings[qsid] = *v;
-        }
+        QList<quint16> known;
+        for (quint16 qsid : std::as_const(raw.supportedSettings))
+            if (qmksettings::Catalog::instance().supported(qsid))
+                known.append(qsid);
+        std::sort(known.begin(), known.end());
+        raw.settings = vial::qmkSettingsGet(link, known);
     }
 
     if (parts & LightingPart) {
@@ -147,9 +146,13 @@ RawKeyboard loadRaw(hid::Link &link, const std::optional<QByteArray> &sideloadJs
 
     raw.keymap = vial::keymapBuffer(link, raw.layers * def.rows * def.cols * 2);
     raw.encoders.resize(raw.layers * def.encoderCount);
+    QList<QPair<int, int>> which;
     for (int layer = 0; layer < raw.layers; ++layer)
         for (int idx : def.encoderIndexes)
-            raw.encoders[layer * def.encoderCount + idx] = vial::encoder(link, layer, idx);
+            which.append({layer, idx});
+    const auto codes = vial::encoders(link, which);
+    for (int i = 0; i < which.size(); ++i)
+        raw.encoders[which[i].first * def.encoderCount + which[i].second] = codes[i];
     if (!def.layoutLabels.isUndefined() && !def.layoutLabels.isNull())
         raw.layoutOptions = vial::layoutOptions(link);
 

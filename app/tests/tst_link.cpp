@@ -79,6 +79,42 @@ private slots:
         QCOMPARE(r.kb->requests.size(), 5);
     }
 
+    static QList<QByteArray> numbered(int n)
+    {
+        QList<QByteArray> msgs;
+        for (int i = 0; i < n; ++i)
+            msgs.append(QByteArray(1, char(0x40 + i)));
+        return msgs;
+    }
+
+    void usbPipelines()
+    {
+        Rig r(false);
+        const auto replies = r.link->transactMany(numbered(20));
+        QCOMPARE(replies.size(), 20);
+        for (int i = 0; i < 20; ++i)
+            QCOMPARE(replies[i].left(1), QByteArray(1, char(0x40 + i)));
+        QCOMPARE(r.kb->maxInFlight, Link::kWindow);
+    }
+
+    // a reply that doesn't come leaves the rest to one by one, still each to its own request
+    void usbPipelineFallsBack()
+    {
+        Rig r(false);
+        r.kb->lateMs = {1, 1, 800};
+        const auto replies = r.link->transactMany(numbered(12));
+        QCOMPARE(replies.size(), 12);
+        for (int i = 0; i < 12; ++i)
+            QCOMPARE(replies[i].left(1), QByteArray(1, char(0x40 + i)));
+    }
+
+    void dongleOneAtATime()
+    {
+        Rig r(true);
+        QCOMPARE(r.link->transactMany(numbered(5)).size(), 5);
+        QCOMPARE(r.kb->maxInFlight, 1);
+    }
+
     // a retried request leaves a second reply in flight; it must not answer the next request
     void dongleFlushesLateReplies()
     {
